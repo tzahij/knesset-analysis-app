@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>חבר הכנסת</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="reader-body">
+    <main class="reader-shell">
+      <a class="back-link" href="/members">חזרה לרשימת חברי הכנסת</a>
+
+      <section class="reader-grid">
+        <aside class="reader-sidebar panel">
+          <p class="eyebrow">Member Page</p>
+          <h1 id="member-name">טוען חבר כנסת...</h1>
+          <p id="member-party" class="muted"></p>
+
+          <dl class="meta-list" id="member-stats"></dl>
+
+          <div class="pill-list" id="member-aliases"></div>
+
+          <section class="member-contact-panel" aria-labelledby="member-contact-title">
+            <div class="member-contact-panel__header">
+              <h2 id="member-contact-title">ספרו להם מה אתם חושבים!</h2>
+            </div>
+            <div id="member-contact-list" class="member-contact-list">
+              <p class="muted">טוען דרכי קשר...</p>
+            </div>
+          </section>
+
+          <div id="member-status" class="updates-status">
+            <p class="muted">טוען את מצב אינדקס חברי הכנסת...</p>
+          </div>
+
+          <div class="member-file-panel">
+            <h2>קובצי האמירות</h2>
+            <p class="muted">
+              לכל חבר כנסת יש שני קבצים: קובץ מלא מכל התקופה, וקובץ קטן המבוסס רק על עשרת הפרוטוקולים האחרונים עם ציטוטי 50 מילים ומעלה.
+            </p>
+            <div class="member-file-grid">
+              <section class="member-file-card">
+                <div class="member-file-card__header">
+                  <h3>קובץ אמירות מלא</h3>
+                  <p class="muted">כל הציטוטים בני 50 מילים ומעלה, מכל הפרוטוקולים הרלוונטיים.</p>
+                </div>
+                <div id="member-file-full-status" class="updates-status is-neutral">
+                  <p class="muted">טוען את מצב הקובץ המלא...</p>
+                </div>
+                <div class="action-stack">
+                  <a
+                    id="member-file-full-download-link"
+                    class="secondary-button"
+                    href="#"
+                    hidden
+                    download
+                  >
+                    הורד את הקובץ המלא
+                  </a>
+                </div>
+              </section>
+
+              <section class="member-file-card member-file-card--small">
+                <div class="member-file-card__header">
+                  <h3>קובץ אמירות קטן</h3>
+                  <p class="muted">רק עשרת הפרוטוקולים האחרונים שבהם נשמרו ציטוטים של 50 מילים ומעלה.</p>
+                </div>
+                <div id="member-file-small-status" class="updates-status is-neutral">
+                  <p class="muted">טוען את מצב הקובץ הקטן...</p>
+                </div>
+                <div class="action-stack">
+                  <a
+                    id="member-file-small-download-link"
+                    class="secondary-button"
+                    href="#"
+                    hidden
+                    download
+                  >
+                    הורד את הקובץ הקטן
+                  </a>
+                </div>
+              </section>
+            </div>
+          </div>
+        </aside>
+
+        <article class="reader-panel panel">
+          <div class="member-view-tabs" role="tablist" aria-label="תוכן עמוד חבר הכנסת">
+            <button
+              id="member-analysis-tab"
+              class="source-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-expanded="false"
+            >
+              ניתוח פוליטי
+            </button>
+            <button
+              id="member-highlights-tab"
+              class="source-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-expanded="false"
+            >
+              ציטוטים נבחרים
+            </button>
+            <button
+              id="member-protocols-tab"
+              class="source-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-expanded="false"
+            >
+              פרוטוקולים
+            </button>
+            <button
+              id="member-votes-tab"
+              class="source-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-expanded="false"
+            >
+              הצבעות ופרופיל הצירים
+            </button>
+          </div>
+
+          <section id="member-analysis-panel" class="member-panel-view" hidden>
+            <div class="list-header">
+              <div>
+                <p class="eyebrow">Analysis</p>
+                <h2>ניתוח פוליטי של חבר הכנסת</h2>
+                <p id="member-analysis-summary" class="muted"></p>
+              </div>
+            </div>
+
+            <div class="analysis-source-tabs" role="tablist" aria-label="סוג ניתוח">
+              <button
+                id="member-analysis-source-full-tab"
+                class="source-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+              >
+                ניתוח מהקובץ המלא
+              </button>
+              <button
+                id="member-analysis-source-small-tab"
+                class="source-tab is-active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+              >
+                ניתוח מהקובץ הקטן
+              </button>
+            </div>
+
+            <div id="member-analysis-disclaimer" class="analysis-source-disclaimer" hidden></div>
+
+            <div id="member-analysis-status" class="updates-status is-neutral">
+              <p class="muted">טוען את מצב הניתוח...</p>
+            </div>
+
+            <div class="action-stack">
+              <button
+                id="member-analysis-build-button"
+                class="primary-button"
+                type="button"
+                data-requires-role="admin"
+              >
+                צור ניתוח לחבר הכנסת הזה
+              </button>
+            </div>
+
+            <div id="member-analysis-graph" class="analysis-graph" hidden></div>
+            <div id="member-analysis-content" class="analysis-sections"></div>
+          </section>
+
+          <section id="member-highlights-panel" class="member-panel-view" hidden>
+            <div class="list-header">
+              <div>
+                <p class="eyebrow">Highlights</p>
+                <h2>ציטוטים נבחרים מתוך הניתוח</h2>
+                <p id="member-highlights-summary" class="muted"></p>
+              </div>
+            </div>
+
+            <div class="analysis-source-tabs" role="tablist" aria-label="סוג הציטוטים הנבחרים">
+              <button
+                id="member-highlights-source-full-tab"
+                class="source-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+              >
+                ציטוטים מהקובץ המלא
+              </button>
+              <button
+                id="member-highlights-source-small-tab"
+                class="source-tab is-active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+              >
+                ציטוטים מהקובץ הקטן
+              </button>
+            </div>
+
+            <div id="member-highlights-disclaimer" class="analysis-source-disclaimer" hidden></div>
+
+            <div id="member-highlights-status" class="updates-status is-neutral">
+              <p class="muted">טוען את מצב הציטוטים הנבחרים...</p>
+            </div>
+
+            <div class="action-stack">
+              <button
+                id="member-highlights-build-button"
+                class="primary-button"
+                type="button"
+                data-requires-role="admin"
+              >
+                חלץ ציטוטים נבחרים לחבר הכנסת הזה
+              </button>
+            </div>
+
+            <div id="member-highlights-content" class="analysis-highlights"></div>
+          </section>
+
+          <section id="member-protocols-panel" class="member-panel-view" hidden>
+            <div class="list-header">
+              <div>
+                <p class="eyebrow">Protocols</p>
+                <h2>פרוטוקולים שבהם חבר הכנסת דיבר</h2>
+                <p id="member-summary" class="muted"></p>
+              </div>
+              <p id="member-results-summary" class="muted">טוען תוצאות...</p>
+            </div>
+
+            <div id="member-protocol-list" class="member-protocol-list"></div>
+          </section>
+          <section id="member-votes-panel" class="member-panel-view" hidden>
+            <div class="list-header">
+              <div>
+                <p class="eyebrow">Voting</p>
+                <h2>פרופיל צירים מבוסס הצבעות</h2>
+                <p id="member-votes-summary" class="muted"></p>
+              </div>
+            </div>
+
+            <div id="member-votes-status" class="updates-status is-neutral">
+              <p class="muted">טוען את נתוני ההצבעות והחוקים...</p>
+            </div>
+
+            <div id="member-votes-content" class="member-votes-content"></div>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/member.js" defer></script>
+  </body>
+</html>

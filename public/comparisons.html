@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>השוואות נתונים בין חברי הכנסת</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell shell--wide">
+      <a class="back-link" href="/">חזרה לדף הראשי</a>
+
+      <section class="hero-card comparison-page-hero">
+        <p class="eyebrow">Data Comparisons</p>
+        <h1>השוואות נתונים בין חברי הכנסת והמפלגות</h1>
+        <p class="hero-copy">
+          זהו עמוד ייעודי לכל ההשוואות הכמותיות שנבנו רק בקוד קשיח, על בסיס דברי חברי
+          הכנסת בפרוטוקולים מ־2022 ואילך. בחלק העליון תמצאו סייר דינמי שמאפשר לעבור בין
+          המדדים, להחליף בין תצוגת חברי כנסת לתצוגת מפלגות, ולראות מיד מי מובילים בכל מדד.
+        </p>
+
+        <div class="comparison-page-hero__actions">
+          <a class="source-link" href="/">דף הבית</a>
+          <a class="source-link" href="/members">חברי הכנסת</a>
+        </div>
+
+        <div class="hero-stats">
+          <article class="stat-card">
+            <span class="stat-label">מספר ההשוואות</span>
+            <strong id="comparison-count">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">פרוטוקולים בבסיס הנתונים</span>
+            <strong id="comparison-protocol-count">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">חברי כנסת עם מספיק נתונים</span>
+            <strong id="comparison-eligible-count">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">עדכון אחרון</span>
+            <strong id="comparison-sync-date">טוען...</strong>
+          </article>
+        </div>
+
+        <div id="comparison-page-status" class="comparison-page-status"></div>
+      </section>
+
+      <section class="layout-grid comparison-page-layout">
+        <aside class="panel sticky-panel comparison-sidebar">
+          <h2>סייר השוואות דינמי</h2>
+          <p class="muted">
+            בחרו מדד, עברו בין חברי הכנסת למפלגות, והציגו את העשירייה או החמישייה
+            המובילה.
+          </p>
+
+          <div class="action-stack">
+            <button
+              id="comparison-refresh-button"
+              class="secondary-button"
+              type="button"
+              data-requires-role="advanced"
+            >
+              רענן את מדדי ההשוואות
+            </button>
+          </div>
+
+          <div class="field">
+            <span>בחרו מדד</span>
+            <div id="comparison-selector" class="comparison-selector-grid"></div>
+          </div>
+
+          <div class="field">
+            <span>תצוגה</span>
+            <div class="comparison-toggle-group" id="comparison-view-switch">
+              <button class="comparison-toggle is-active" type="button" data-view="members">
+                חברי הכנסת
+              </button>
+              <button class="comparison-toggle" type="button" data-view="parties">
+                מפלגות
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <span>כמה להציג בגרף</span>
+            <div class="comparison-toggle-group" id="comparison-top-switch">
+              <button class="comparison-toggle is-active" type="button" data-top-count="5">
+                5
+              </button>
+              <button class="comparison-toggle" type="button" data-top-count="10">
+                10
+              </button>
+              <button class="comparison-toggle" type="button" data-top-count="15">
+                15
+              </button>
+            </div>
+          </div>
+
+          <div id="comparison-side-summary" class="comparison-side-summary"></div>
+          <div id="comparison-side-detail" class="comparison-side-detail"></div>
+        </aside>
+
+        <section class="panel comparison-main-panel">
+          <div class="list-header">
+            <div>
+              <p class="eyebrow">Explorer</p>
+              <h2>הובלה לפי מדד</h2>
+              <p class="muted">
+                הסייר הדינמי מתעדכן לפי המדד שנבחר ומציג את המובילים בזמן אמת מתוך מאגר
+                ההשוואות.
+              </p>
+            </div>
+            <p id="comparison-results-summary" class="muted">טוען את מסך ההשוואות...</p>
+          </div>
+
+          <div id="comparison-explorer"></div>
+
+          <section class="comparison-page-section">
+            <div class="comparison-page-section__header">
+              <div>
+                <p class="eyebrow">Leaders</p>
+                <h2>מי מובילים בכל מדד</h2>
+              </div>
+              <p class="muted">
+                כל כרטיס מראה את חבר הכנסת והמפלגה המובילים באותו מדד. לחיצה על הכרטיס
+                תפתח את המדד בסייר הדינמי.
+              </p>
+            </div>
+            <div id="comparison-leaders-grid" class="comparison-leader-grid"></div>
+          </section>
+
+          <section class="comparison-page-section">
+            <div class="comparison-page-section__header">
+              <div>
+                <p class="eyebrow">All Comparisons</p>
+                <h2>כל ההשוואות במקום אחד</h2>
+              </div>
+              <p class="muted">
+                בכל כרטיס מוצגים ההסבר המתודולוגי, מילון המונחים, והצמרת של חברי הכנסת
+                והמפלגות באותו תחום.
+              </p>
+            </div>
+            <div id="comparison-sections" class="comparison-page-sections"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/comparisons.js" defer></script>
+  </body>
+</html>

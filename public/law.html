@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>קריאת חוק</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="reader-body">
+    <main class="reader-shell">
+      <a class="back-link" href="/">חזרה לעמוד הראשי</a>
+
+      <section class="reader-grid">
+        <aside class="reader-sidebar panel">
+          <p class="eyebrow">Third Reading Law</p>
+          <h1 id="law-title">טוען חוק...</h1>
+          <dl class="meta-list" id="law-meta"></dl>
+
+          <div class="action-stack">
+            <a id="download-pdf-button" class="primary-button inline-action" href="#" hidden>
+              הורדת PDF רשמי
+            </a>
+            <a id="download-word-button" class="secondary-button inline-action" href="#" hidden>
+              הורדת קובץ Word
+            </a>
+          </div>
+        </aside>
+
+        <article class="reader-panel panel">
+          <div class="reader-tabs" role="tablist" aria-label="Law page tabs">
+            <button
+              id="law-text-tab"
+              class="source-tab is-active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+            >
+              תיאור ונוסח החוק
+            </button>
+            <button
+              id="law-votes-tab"
+              class="source-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+            >
+              הצבעת המליאה
+            </button>
+            <button
+              id="law-analysis-tab"
+              class="source-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+            >
+              ניתוח אידיאולוגי
+            </button>
+          </div>
+
+          <section id="law-text-panel" class="law-panel-view">
+            <div id="reader-loading" class="reader-loading">טוען את פרטי החוק...</div>
+            <div id="law-summary" class="law-summary"></div>
+            <div id="law-content" class="protocol-content"></div>
+          </section>
+
+          <section id="law-votes-panel" class="law-panel-view" hidden>
+            <div id="law-votes-content" class="law-votes-content">
+              <section class="law-content-card">
+                <div class="law-content-card__header">
+                  <p class="eyebrow">Voting</p>
+                  <h2>תוצאות ההצבעה</h2>
+                </div>
+                <p class="muted">פתחו את הטאב כדי לטעון איך הצביעו חברי הכנסת על החוק הזה.</p>
+              </section>
+            </div>
+          </section>
+
+          <section id="law-analysis-panel" class="law-panel-view" hidden>
+            <div id="law-analysis-content" class="law-analysis-content">
+              <section class="law-content-card">
+                <div class="law-content-card__header">
+                  <p class="eyebrow">Analysis</p>
+                  <h2>ניתוח אידיאולוגי של החוק</h2>
+                </div>
+                <p class="muted">פתחו את הטאב כדי לטעון את הניתוח האידיאולוגי של החוק.</p>
+              </section>
+            </div>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/law.js" defer></script>
+  </body>
+</html>

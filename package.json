@@ -1,0 +1,30 @@
+{
+  "name": "israeli-knesset-protocol-reader",
+  "version": "1.0.0",
+  "description": "Local reader and bulk downloader for Knesset plenary protocols.",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "start:staging": "node src/scripts/start-staging.js",
+    "contacts:build": "node src/scripts/build-member-contact-directory.js",
+    "contacts:prune-broken": "node src/scripts/prune-broken-member-contact-links.js",
+    "contacts:remove-reported": "node src/scripts/remove-reported-member-contact-links.js",
+    "deploy:prod": "node src/scripts/deploy-production.js",
+    "deploy:prod:check-auth": "node src/scripts/deploy-production.js --check-auth",
+    "deploy:prod:full-data": "node src/scripts/deploy-production.js --full-data",
+    "promote:staging-data": "node src/scripts/promote-analyses.js",
+    "promote:analyses": "node src/scripts/promote-analyses.js",
+    "promote:law-analyses": "node src/scripts/promote-law-analyses.js",
+    "share:cloudflare": "node src/scripts/cloudflare-quick-tunnel.js",
+    "share:staging": "node src/scripts/share-staging.js",
+    "share:cloudflare:stop": "node src/scripts/stop-cloudflare-tunnel.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.6.205",
+    "puppeteer-core": "^24.39.1",
+    "word-extractor": "^0.3.0"
+  }
+}

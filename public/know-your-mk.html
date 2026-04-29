@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>הכירו את חברי הכנסת</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero-card know-your-mk-page-hero">
+        <div class="know-your-mk-page-hero__copy">
+          <p class="eyebrow">הכירו את חברי הכנסת</p>
+          <h1>הכירו את חברי הכנסת</h1>
+          <p class="hero-copy">
+            מפה אינטראקטיבית של ארבעת הצירים האידיאולוגיים של חברי הכנסת. אפשר לעבור בין
+            התצוגה של העמדות המפורשות, בין התצוגה של העמדות המשתמעות ובין תצוגה של
+            מבוסס הצבעות, ואז ללחוץ על כל חבר כנסת כדי לראות את הציון, הנימוקים, הראיות
+            והחוקים שהשפיעו על המיקום שלו.
+          </p>
+        </div>
+
+        <div class="know-your-mk-page-hero__actions">
+          <a class="secondary-button compact-button" href="/">חזרה לעמוד הראשי</a>
+          <a class="secondary-button compact-button" href="/members">לעמודי חברי הכנסת</a>
+        </div>
+      </section>
+
+      <section class="landing-panel landing-panel--know-your-mk">
+        <div class="landing-section__header landing-section__header--tight">
+          <div>
+            <p class="eyebrow">מפת הצירים</p>
+            <h2>מפה מלאה של ארבעת הצירים</h2>
+          </div>
+          <p class="muted">
+            העמוד כולל שלוש תצוגות משלימות: ניתוח מהקובץ הקטן, ניתוח מהקובץ המלא במקרה
+            הצורך, ותצוגה של מבוסס הצבעות הבנויה רק מחוקי קריאה שלישית שבהם הח"כ הצביע בעד.
+          </p>
+        </div>
+
+        <div id="know-your-mk-view-switch" class="know-your-mk-view-switch">
+          <p class="muted">טוען את סוגי התצוגה...</p>
+        </div>
+
+        <div class="know-your-mk__controls">
+          <label class="field">
+            <span>חיפוש חבר כנסת</span>
+            <input
+              id="know-your-mk-search"
+              type="search"
+              placeholder="למשל נתניהו, טיבי, רוטמן"
+            />
+          </label>
+
+          <label class="field">
+            <span>מפלגה</span>
+            <select id="know-your-mk-party">
+              <option value="">כל המפלגות</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="know-your-mk-summary" class="know-your-mk__summary">
+          <p class="muted">טוען את מפת חברי הכנסת...</p>
+        </div>
+
+        <div id="know-your-mk-gaps" class="know-your-mk__gaps">
+          <div class="landing-empty-card">
+            <p class="muted">טוען את פערי הדיבור וההצבעה...</p>
+          </div>
+        </div>
+
+        <div class="know-your-mk__layout">
+          <div id="know-your-mk-axes" class="know-your-mk__axes">
+            <div class="landing-empty-card">
+              <p class="muted">טוען את מפת ארבעת הצירים...</p>
+            </div>
+          </div>
+
+          <aside id="know-your-mk-detail" class="know-your-mk__detail">
+            <div class="landing-empty-card">
+              <p class="muted">בחרו חבר כנסת באחד הצירים כדי לראות את הנימוקים.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/know-your-mk.js" defer></script>
+  </body>
+</html>

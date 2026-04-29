@@ -1,0 +1,24 @@
+services:
+  knesset-reader:
+    build: .
+    container_name: knesset-protocol-reader
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
+      AUTH_BASIC_USERNAME: ${AUTH_BASIC_USERNAME:-}
+      AUTH_BASIC_PASSWORD: ${AUTH_BASIC_PASSWORD:-}
+      AUTH_BASIC_DISPLAY_NAME: ${AUTH_BASIC_DISPLAY_NAME:-}
+      AUTH_ADVANCED_USERNAME: ${AUTH_ADVANCED_USERNAME:-}
+      AUTH_ADVANCED_PASSWORD: ${AUTH_ADVANCED_PASSWORD:-}
+      AUTH_ADVANCED_DISPLAY_NAME: ${AUTH_ADVANCED_DISPLAY_NAME:-}
+      AUTH_ADMIN_USERNAME: ${AUTH_ADMIN_USERNAME:-}
+      AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD:-}
+      AUTH_ADMIN_DISPLAY_NAME: ${AUTH_ADMIN_DISPLAY_NAME:-}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-auto}
+    volumes:
+      - ./data:/app/data

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>בדיקות עובדות</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell fact-checks-shell">
+      <section class="hero-card fact-checks-hero">
+        <div>
+          <p class="eyebrow">Fact Checks</p>
+          <h1>בדיקות עובדות מתוך פרוטוקולי הכנסת</h1>
+          <p class="hero-copy">
+            בחרו פרוטוקול, חלצו ממנו טענות עובדתיות של חברי הכנסת, ואז החליטו האם לאמת או להפריך
+            כל טענה בנפרד או את כולן יחד. בגרסה הזו המערכת מתמקדת בטענות מספריות וקונקרטיות בלבד.
+          </p>
+        </div>
+
+        <div class="landing-hero__actions">
+          <a class="secondary-button compact-button" href="/">חזרה לעמוד הראשי</a>
+          <button id="fact-check-process-button" class="secondary-button compact-button" type="button">
+            חלץ טענות מכל הפרוטוקולים החדשים שבתור
+          </button>
+        </div>
+      </section>
+
+      <section class="layout-grid fact-check-workbench-layout">
+        <aside class="panel sticky-panel">
+          <h2>קטלוג פרוטוקולים</h2>
+
+          <label class="field">
+            <span>חיפוש</span>
+            <input id="protocol-search-input" type="search" placeholder="למשל חינוך, 2026, תקציב" />
+          </label>
+
+          <label class="field">
+            <span>מקור</span>
+            <select id="protocol-source-filter">
+              <option value="">כל המקורות</option>
+              <option value="plenum">מליאה</option>
+              <option value="committee">ועדות</option>
+            </select>
+          </label>
+
+          <div class="action-stack">
+            <button id="protocol-refresh-button" class="secondary-button" type="button">
+              רענן רשימת פרוטוקולים
+            </button>
+          </div>
+
+          <div id="fact-check-status-card" class="updates-status">
+            <p class="muted">טוען את מצב תור החילוץ...</p>
+          </div>
+        </aside>
+
+        <section class="panel fact-check-workbench-panel">
+          <div class="fact-check-workbench-grid">
+            <section class="fact-check-catalog">
+              <div class="list-header">
+                <div class="list-header__copy">
+                  <p class="eyebrow">Protocol Catalog</p>
+                  <h2>בחרו פרוטוקול לעבודה</h2>
+                  <p class="muted">כל הפרוטוקולים זמינים לבחירה, עם חיפוש וסינון.</p>
+                </div>
+                <p id="protocol-catalog-summary" class="muted">טוען רשימה...</p>
+              </div>
+
+              <div id="protocol-catalog-list" class="fact-check-catalog-list">
+                <p class="muted">טוען פרוטוקולים...</p>
+              </div>
+
+              <div class="fact-check-pagination">
+                <button id="protocol-prev-page" class="secondary-button" type="button">
+                  הקודם
+                </button>
+                <span id="protocol-page-label" class="muted">עמוד 1</span>
+                <button id="protocol-next-page" class="secondary-button" type="button">
+                  הבא
+                </button>
+              </div>
+            </section>
+
+            <section class="fact-check-workspace">
+              <div id="selected-protocol-workspace" class="fact-check-selected-empty">
+                <h2>בחרו פרוטוקול מהרשימה</h2>
+                <p class="muted">
+                  לאחר הבחירה תוכלו לחלץ את הטענות העובדתיות, לעיין בהן, ואז לאמת או להפריך כל טענה
+                  בנפרד או את כולן יחד.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/fact-checks.js" defer></script>
+  </body>
+</html>

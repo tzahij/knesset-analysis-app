@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>דברו עם הנציגים שלכם!</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell representative-directory-shell">
+      <a class="back-link" href="/">חזרה לדף הראשי</a>
+
+      <section class="hero-card representative-directory-hero">
+        <div class="representative-directory-hero__copy">
+          <p class="eyebrow">Action Directory</p>
+          <h1>דברו עם הנציגים שלכם!</h1>
+          <p class="hero-copy">
+            עמוד אחד שמרכז את כל דרכי הקשר הציבוריות של חברי הכנסת. חפשו לפי שם או סיעה,
+            סננו לפי פלטפורמה, ולחצו על האייקון המתאים כדי לפתוח שיחה, מייל או פרופיל ציבורי.
+          </p>
+        </div>
+
+        <div class="representative-directory-hero__stats">
+          <article class="representative-directory-stat">
+            <span class="representative-directory-stat__label">חברי כנסת</span>
+            <strong id="representatives-total-members">טוען...</strong>
+          </article>
+          <article class="representative-directory-stat">
+            <span class="representative-directory-stat__label">דרכי קשר ציבוריות</span>
+            <strong id="representatives-total-contacts">טוען...</strong>
+          </article>
+          <article class="representative-directory-stat">
+            <span class="representative-directory-stat__label">עם קשר ישיר</span>
+            <strong id="representatives-direct-members">טוען...</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel representative-directory-controls">
+        <div class="representative-directory-toolbar">
+          <label class="field representative-directory-toolbar__search">
+            <span>חיפוש לפי שם חבר/ת הכנסת או סיעה</span>
+            <input
+              id="representatives-search-input"
+              type="search"
+              placeholder="למשל נתניהו, יש עתיד, גוטליב"
+            />
+          </label>
+
+          <label class="field">
+            <span>סינון לפי סיעה</span>
+            <select id="representatives-party-select">
+              <option value="">כל הסיעות</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>מיון</span>
+            <select id="representatives-sort-select">
+              <option value="party">לפי סיעה</option>
+              <option value="name">לפי א-ת</option>
+              <option value="contacts">לפי מספר דרכי קשר</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="representative-directory-platforms">
+          <div class="representative-directory-platforms__header">
+            <div>
+              <p class="eyebrow">Quick Filters</p>
+              <h2>בחרו ערוץ קשר</h2>
+            </div>
+            <p id="representatives-results-summary" class="muted">טוען את ספריית הקשר...</p>
+          </div>
+
+          <div id="representatives-platform-filters" class="representative-platform-filter-row">
+            <p class="muted">טוען ערוצים...</p>
+          </div>
+        </div>
+
+        <div class="representative-directory-footnote">
+          <span id="representatives-built-at" class="muted">טוען זמן עדכון...</span>
+          <p id="representatives-disclaimer" class="muted">
+            טוען את הערת המקור והאמינות...
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div id="representatives-grid" class="representatives-grid">
+          <article class="landing-empty-card">
+            <p class="muted">טוען את כרטיסי חברי הכנסת...</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/talk-to-your-representatives.js" defer></script>
+  </body>
+</html>

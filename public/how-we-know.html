@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>איך אנחנו יודעים</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell shell--wide">
+      <a class="back-link" href="/">חזרה לדף הראשי</a>
+
+      <section class="hero-card methodology-hero">
+        <div class="methodology-hero__copy">
+          <p class="eyebrow">איך אנחנו יודעים</p>
+          <h1>איך האתר אוסף, מחשב ומנתח את המידע שהוא מציג</h1>
+          <p class="hero-copy">
+            עמוד הסבר מפורט על כל שכבות העבודה של האתר: מאיפה מגיעים הפרוטוקולים, איך
+            נאספים החוקים וההצבעות, איך נבנים עמודי חברי הכנסת, מה מחושב רק בקוד, ומה
+            עובר דרך מודל שפה.
+          </p>
+        </div>
+
+        <div class="methodology-hero__meta">
+          <div class="methodology-generated-card">
+            <span class="methodology-generated-card__label">מועד יצירת התיעוד</span>
+            <strong id="methodology-generated-at">טוען...</strong>
+          </div>
+          <div
+            id="methodology-admin-controls"
+            class="methodology-admin-controls auth-role-hidden"
+            data-requires-role="admin"
+            data-auth-mode="hide"
+            hidden
+          >
+            <strong>ניהול תיעוד</strong>
+            <p class="muted">
+              המסמך הזה נשמר כסנאפשוט קבוע. רק אדמין יכול ליצור אותו מחדש ולעדכן את התוכן המוצג מכאן והלאה.
+            </p>
+            <button id="methodology-recreate-button" class="secondary-button compact-button" type="button">
+              יצירה מחדש של התיעוד
+            </button>
+            <div id="methodology-recreate-status" class="updates-status is-neutral" hidden></div>
+          </div>
+          <p class="muted">
+            המסמך הזה נבנה מתוך הקוד הפעיל של הפלטפורמה, והוא מיועד לקוראים שרוצים להבין
+            לא רק מה האתר מציג, אלא גם למה ואיך.
+          </p>
+        </div>
+      </section>
+
+      <section id="methodology-snapshot" class="methodology-snapshot">
+        <div class="landing-empty-card">
+          <p class="muted">טוען תמונת מצב של המערכת...</p>
+        </div>
+      </section>
+
+      <section class="layout-grid methodology-layout">
+        <aside class="panel sticky-panel methodology-sidebar">
+          <h2>ניווט בעמוד</h2>
+          <p class="muted">
+            כל כפתור פותח חלק אחר של ההסבר: מקורות הנתונים, תהליכי החישוב, והפרומפטים
+            שמפעילים את המודלים.
+          </p>
+
+          <div id="methodology-nav" class="methodology-nav">
+            <p class="muted">טוען את פרקי ההסבר...</p>
+          </div>
+        </aside>
+
+        <section id="methodology-content" class="methodology-content">
+          <div class="landing-empty-card">
+            <p class="muted">טוען את המתודולוגיה המלאה...</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/how-we-know.js" defer></script>
+  </body>
+</html>

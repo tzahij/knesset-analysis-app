@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>×§×¨×™××ª ×¤×¨×•×˜×•×§×•×œ</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="reader-body">
+    <main class="reader-shell">
+      <a class="back-link" href="/">×—×–×¨×” ×œ×¨×©×™×ž×ª ×”×¤×¨×•×˜×•×§×•×œ×™×</a>
+
+      <section class="reader-grid">
+        <aside class="reader-sidebar panel">
+          <p class="eyebrow">Protocol</p>
+          <h1 id="protocol-title">×˜×•×¢×Ÿ ×¤×¨×•×˜×•×§×•×œ...</h1>
+          <dl class="meta-list" id="protocol-meta"></dl>
+          <a id="download-single-button" class="primary-button inline-action" href="#">
+            ×”×•×¨×“×ª ×”×§×•×‘×¥ ×”×ž×§×•×¨×™
+          </a>
+
+          <div class="reader-sidebar__stack">
+            <div class="reader-side-card">
+              <p class="eyebrow">Fact Checks</p>
+              <h2>×‘×“×™×§×•×ª ×¢×•×‘×“×•×ª ×¢×œ ×“×‘×¨×™ ×—×‘×¨×™ ×”×›× ×¡×ª</h2>
+              <div id="fact-check-sidebar-status" class="muted">×˜×•×¢×Ÿ ××ª ×ž×¦×‘ ×”×‘×“×™×§×”...</div>
+              <button
+                id="sidebar-reextract-facts-button"
+                class="secondary-button compact-button"
+                type="button"
+              >
+                ×—×œ×¥ ×˜×¢× ×•×ª ×ž×—×“×©
+              </button>
+            </div>
+
+            <a class="secondary-button inline-action" href="/fact-checks">
+              ×œ×›×œ ×‘×“×™×§×•×ª ×”×¢×•×‘×“×•×ª
+            </a>
+          </div>
+        </aside>
+
+        <article class="reader-panel panel">
+          <div class="reader-tabs" role="tablist" aria-label="×ª×¦×•×’×ª ×¤×¨×•×˜×•×§×•×œ">
+            <button
+              id="protocol-tab-content"
+              class="reader-tab is-active"
+              type="button"
+              data-tab="content"
+              role="tab"
+              aria-selected="true"
+            >
+              ×”×¤×¨×•×˜×•×§×•×œ ×”×ž×œ×
+            </button>
+            <button
+              id="protocol-tab-fact-checks"
+              class="reader-tab"
+              type="button"
+              data-tab="fact-checks"
+              role="tab"
+              aria-selected="false"
+            >
+              ×‘×“×™×§×•×ª ×¢×•×‘×“×•×ª
+            </button>
+          </div>
+
+          <section id="protocol-panel-content" class="reader-tab-panel" role="tabpanel">
+            <div id="reader-loading" class="reader-loading">×˜×•×¢×Ÿ ×•×ž×ž×™×¨ ××ª ×”×ž×¡×ž×š...</div>
+            <div id="protocol-content" class="protocol-content"></div>
+          </section>
+
+          <section id="protocol-panel-fact-checks" class="reader-tab-panel" role="tabpanel" hidden>
+            <div id="fact-check-loading" class="reader-loading">×˜×•×¢×Ÿ ××ª ×‘×“×™×§×•×ª ×”×¢×•×‘×“×•×ª...</div>
+            <div id="fact-check-content" class="fact-check-content"></div>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <script src="/protocol.js" defer></script>
+  </body>
+</html>

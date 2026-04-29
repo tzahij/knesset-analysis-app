@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>קריאת פרוטוקול</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="reader-body">
+    <main class="reader-shell">
+      <a class="back-link" href="/">חזרה לרשימת הפרוטוקולים</a>
+
+      <section class="reader-grid">
+        <aside class="reader-sidebar panel">
+          <p class="eyebrow">Protocol</p>
+          <h1 id="protocol-title">טוען פרוטוקול...</h1>
+          <dl class="meta-list" id="protocol-meta"></dl>
+          <a id="download-single-button" class="primary-button inline-action" href="#">
+            הורדת הקובץ המקורי
+          </a>
+        </aside>
+
+        <article class="reader-panel panel">
+          <div id="reader-loading" class="reader-loading">טוען וממיר את המסמך...</div>
+          <div id="protocol-content" class="protocol-content"></div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/protocol.js" defer></script>
+  </body>
+</html>

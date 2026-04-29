@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>פרוטוקולי הכנסת</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero-card landing-hero">
+        <div class="landing-hero__copy">
+          <p class="eyebrow">Israeli Knesset Analyzer</p>
+          <h1>עמוד פתיחה אחד לדיוני הכנסת, לחוקים, להצבעות, לחברי הכנסת ולסימנים הפוליטיים שמתחת לפני השטח.</h1>
+          <p class="hero-copy">
+            הכניסה לכנסת דרך עדשה חדה יותר: פרוטוקולים רשמיים של המליאה והוועדות, חוקים בקריאה שלישית,
+            מפת הצבעות מלאה, עמודי חברי כנסת, ניתוחים אידיאולוגיים, איתור הצבעות מפתיעות והשוואות קוד קשיח
+            בין המפלגות, המחנות והשחקנים המרכזיים בזירה.
+          </p>
+
+          <div class="landing-hero__actions">
+            <a class="primary-button compact-button" href="/plenum/">
+              התחילו מהמליאה
+            </a>
+            <a class="secondary-button compact-button" href="/members">
+              עברו לעמודי חברי הכנסת
+            </a>
+            <a class="secondary-button compact-button" href="/comparisons">
+              פתחו את ההשוואות
+            </a>
+            <a class="secondary-button compact-button" href="/how-we-know">
+              איך אנחנו יודעים
+            </a>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="landing-section">
+        <div class="landing-section__header">
+          <div>
+            <p class="eyebrow">Site Map</p>
+            <h2>כל מה שאפשר לפתוח מכאן</h2>
+          </div>
+          <p class="muted">
+            כל כרטיס פותח שכבה אחרת של הפלטפורמה: חומר מקור רשמי, אינטליגנציה על חברי הכנסת או השוואות
+            שיטתיות בין השחקנים הפוליטיים.
+          </p>
+        </div>
+
+        <div id="landing-categories" class="landing-category-grid">
+          <div class="landing-empty-card">
+            <p class="muted">טוען את הקטגוריות והספירות...</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-signal-grid">
+        <article class="landing-panel">
+          <div class="landing-section__header landing-section__header--tight">
+            <div>
+              <p class="eyebrow">Vote Newsline</p>
+              <h2>הצבעות החוק המפתיעות והחשובות ביותר</h2>
+            </div>
+            <p class="muted">
+              קריאה מערכתית מהירה של החוקים שבהם הצבעות התמיכה התנגשו בעוצמה הגדולה ביותר עם הפרופיל
+              המחושב של חברי הכנסת.
+            </p>
+          </div>
+          <div id="landing-newsline">
+            <p class="muted">טוען את חדשות ההצבעות...</p>
+          </div>
+        </article>
+
+        <article class="landing-panel">
+          <div class="landing-section__header landing-section__header--tight">
+            <div>
+              <p class="eyebrow">Spotlight</p>
+              <h2>הפוליטיקאי של השעה</h2>
+            </div>
+            <p class="muted">
+              בכל טעינה נבחר חבר כנסת אחר, עם תקציר פרופיל חד המבוסס על ניתוח הקובץ הקטן שלו.
+            </p>
+          </div>
+          <div id="landing-spotlight">
+            <p class="muted">בוחר פוליטיקאי...</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="landing-panel landing-panel--know-your-mk">
+        <div class="landing-section__header landing-section__header--tight">
+          <div>
+            <p class="eyebrow">הכירו את חברי הכנסת</p>
+            <h2>הכירו את חברי הכנסת</h2>
+          </div>
+          <p class="muted">
+            תמונת מצב מהירה של מי שנמצאים בקצוות של ארבעת הצירים האידיאולוגיים. אפשר לעבור
+            בין התצוגה של העמדות המפורשות, בין התצוגה של העמדות המשתמעות ובין תצוגת
+            מבוסס הצבעות.
+          </p>
+        </div>
+
+        <div id="know-your-mk-summary" class="know-your-mk__summary">
+          <p class="muted">טוען את תקציר חברי הכנסת...</p>
+        </div>
+
+        <div id="know-your-mk-extremes" class="know-your-mk__extremes">
+          <div class="landing-empty-card">
+            <p class="muted">טוען את הקצוות האידיאולוגיים...</p>
+          </div>
+        </div>
+
+        <div id="know-your-mk-gaps" class="know-your-mk__gaps">
+          <div class="landing-empty-card">
+            <p class="muted">טוען את פערי הדיבור וההצבעה...</p>
+          </div>
+        </div>
+
+        <div class="know-your-mk__cta">
+          <a class="primary-button compact-button" href="/know-your-mk">
+            פתחו את המפה המלאה של חברי הכנסת
+          </a>
+        </div>
+      </section>
+
+      <section class="landing-panel landing-panel--quotes">
+        <div class="landing-section__header landing-section__header--tight">
+          <div>
+            <p class="eyebrow">Recent Quotes</p>
+            <h2>קולות עדכניים מהאולם ומהוועדות</h2>
+          </div>
+          <p class="muted">
+            זרם נע של ציטוטים עדכניים של פוליטיקאים, מתוך הפרוטוקולים החדשים ביותר שבהם הם באמת דיברו.
+          </p>
+        </div>
+        <div id="landing-quotes">
+          <p class="muted">טוען ציטוטים עדכניים...</p>
+        </div>
+      </section>
+
+      <section id="explorer" class="hero-card explorer-hero" hidden>
+        <p class="eyebrow">Knesset Protocol Reader</p>
+        <h1>פרוטוקולים של המליאה ושל ועדות הכנסת</h1>
+        <p class="hero-copy">
+          האתר מרכז מקורות רשמיים של הכנסת לצד כלי עיון והשוואה: פרוטוקולי ישיבות המליאה,
+          פרוטוקולי ועדות הכנסת מחמש השנים האחרונות, כל החוקים שהתקבלו
+          בקריאה שלישית ונשמרו במאגר האתר, עמודי חברי כנסת, ומדור ההשוואות מבוססות נתונים. כל מסמך
+          נפתח בעמוד קריאה ייעודי, ואפשר גם להוריד את הקבצים המקוריים כשהם זמינים.
+        </p>
+
+        <div class="source-switch" id="source-tabs" aria-label="בחירת אזור באתר">
+          <button class="source-tab is-active" data-source="plenum" type="button">
+            ישיבות מליאה
+          </button>
+          <button class="source-tab" data-source="committee" type="button">
+            ישיבות ועדות הכנסת
+          </button>
+          <button class="source-tab" data-source="laws" type="button">
+            חוקים בקריאה שלישית
+          </button>
+          <button class="source-tab" data-source="data" type="button">
+            נתונים והשוואות
+          </button>
+        </div>
+
+        <div class="members-entry">
+          <a class="source-link" href="/members">חברי הכנסת</a>
+          <a class="source-link" href="/comparisons">עמוד ההשוואות המלא</a>
+          <a class="source-link" href="/how-we-know">איך אנחנו יודעים</a>
+          <p class="muted">
+            עמודי חברי הכנסת כוללים קישורים לפרוטוקולים שבהם נמצא שמם, החל מתאריך
+            2022-01-01.
+          </p>
+        </div>
+
+        <div class="hero-stats">
+          <article class="stat-card">
+            <span class="stat-label" id="count-label">פרוטוקולים</span>
+            <strong id="protocol-count">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">טווח שנים</span>
+            <strong id="year-range">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">סנכרון אחרון</span>
+            <strong id="sync-date">טוען...</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="layout-grid" hidden>
+        <aside class="panel sticky-panel">
+          <h2 id="filters-heading">סינון וניווט</h2>
+          <label class="field">
+            <span id="search-label">חיפוש לפי תאריך, שעה או מספר ישיבה</span>
+            <input id="search-input" type="search" placeholder="למשל 2026, מרץ, 377" />
+          </label>
+
+          <label class="field">
+            <span>שנה</span>
+            <select id="year-select">
+              <option value="">כל השנים</option>
+            </select>
+          </label>
+
+          <div id="committee-filters" class="filters-group" hidden>
+            <label class="field">
+              <span>סוג ועדה</span>
+              <select id="committee-type-select">
+                <option value="">כל הסוגים</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>שם הוועדה</span>
+              <select id="committee-name-select">
+                <option value="">כל הוועדות</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="action-stack">
+            <button
+              id="refresh-button"
+              class="secondary-button"
+              type="button"
+              data-requires-role="advanced"
+            >
+              רענון מטא-דאטה
+            </button>
+
+            <button
+              id="check-updates-button"
+              class="secondary-button"
+              type="button"
+              data-requires-role="advanced"
+            >
+              בדוק עדכונים
+            </button>
+          </div>
+
+          <div id="updates-status" class="updates-status">
+            <p class="muted">המערכת עדיין לא בדקה אם פורסמו פרוטוקולים חדשים.</p>
+          </div>
+
+          <div
+            id="law-analysis-tools"
+            hidden
+            data-requires-role="admin"
+            data-auth-mode="hide"
+          >
+            <hr class="divider" />
+
+            <h2 id="law-analysis-heading">ניתוח אידיאולוגי של חוקים</h2>
+            <p class="muted" id="law-analysis-copy">
+              הכפתור יריץ ניתוח Gemini עבור כל החוקים שעדיין לא נותחו, וידרג אותם על פי
+              ארבעה צירים אידיאולוגיים.
+            </p>
+
+            <button id="analyze-laws-button" class="primary-button" type="button">
+              נתח את כל החוקים שטרם נותחו
+            </button>
+
+            <div id="law-analysis-status" class="updates-status">
+              <p class="muted">עדיין לא הופעל ניתוח חוקים קבוצתי.</p>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <h2 id="download-heading">הורדת כל הקבצים</h2>
+          <p class="muted" id="download-copy">
+            הכפתור מוריד את כל הפרוטוקולים לתיקייה מקומית אחת עם שמות קבצים
+            שמתחילים בתאריך הישיבה.
+          </p>
+
+          <button id="download-all-button" class="primary-button" type="button">
+            הורד את כל הפרוטוקולים
+          </button>
+
+          <div id="bulk-status" class="download-status">
+            <p class="muted">עדיין לא הופעלה הורדה מלאה.</p>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="list-header">
+            <div class="list-header__copy">
+              <p class="eyebrow" id="list-eyebrow">Reader</p>
+              <h2 id="list-title">בחרו פרוטוקול לפי תאריך</h2>
+              <p id="source-note" class="muted"></p>
+              <div id="laws-subtabs" class="source-subtabs" hidden>
+                <button id="laws-all-tab" class="source-subtab is-active" type="button">
+                  כל החוקים
+                </button>
+                <button id="laws-surprising-tab" class="source-subtab" type="button">
+                  הצבעות מפתיעות
+                </button>
+              </div>
+            </div>
+            <p id="results-summary" class="muted">טוען רשימה...</p>
+          </div>
+
+          <div id="protocol-list" class="protocol-grid"></div>
+
+          <div class="load-more-row">
+            <button id="load-more-button" class="secondary-button" type="button">
+              הצג עוד
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <aside
+        id="admin-side-panel"
+        class="admin-side-panel auth-role-hidden"
+        data-requires-role="admin"
+        data-auth-mode="hide"
+      >
+        <div class="admin-side-panel__header">
+          <p class="eyebrow">Admin Console</p>
+          <h2>Content Intake</h2>
+        </div>
+        <div class="admin-side-panel__section">
+          <h3>Protocol Intake</h3>
+          <p class="muted">
+            Check all protocol feeds without importing them yet. If new protocols are found,
+            review them here and explicitly approve adding them to the website.
+          </p>
+
+          <div class="action-stack">
+            <button id="admin-protocol-check-button" class="primary-button" type="button">
+              Mass-check all protocols
+            </button>
+            <button
+              id="admin-protocol-apply-button"
+              class="secondary-button"
+              type="button"
+              hidden
+            >
+              Add approved protocols to the website
+            </button>
+          </div>
+
+          <div id="admin-protocol-status" class="updates-status is-neutral">
+            <p class="muted">No admin protocol review has been started yet.</p>
+          </div>
+
+          <div id="admin-protocol-results" class="admin-side-panel__results">
+            <p class="muted">New protocol candidates will appear here after a check.</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section">
+          <h3>Third-reading Law Intake</h3>
+          <p class="muted">
+            Check the Knesset laws feed for new laws that passed in a third reading. Review the
+            candidates here and approve downloading and adding them only if you want them on the
+            site.
+          </p>
+
+          <div class="action-stack">
+            <button id="admin-law-check-button" class="primary-button" type="button">
+              Mass-check all laws
+            </button>
+            <button
+              id="admin-law-apply-button"
+              class="secondary-button"
+              type="button"
+              hidden
+            >
+              Download and add approved laws
+            </button>
+          </div>
+
+          <div id="admin-law-status" class="updates-status is-neutral">
+            <p class="muted">No admin law review has been started yet.</p>
+          </div>
+
+          <div id="admin-law-results" class="admin-side-panel__results">
+            <p class="muted">New third-reading laws will appear here after a check.</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section">
+          <h3>Create Missing Law Axes Profiles</h3>
+          <p class="muted">
+            Analyze only the newly added third-reading laws that still do not have an axes profile.
+            If there are no such laws, the system will tell you and do nothing.
+          </p>
+
+          <div class="action-stack">
+            <button id="admin-law-analysis-check-button" class="primary-button" type="button">
+              Analyze new laws without axes profiles
+            </button>
+          </div>
+
+          <div id="admin-law-analysis-status" class="updates-status is-neutral">
+            <p class="muted">No admin-only new-law analysis run has been started yet.</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section">
+          <h3>Explain Unexplained Surprising Votes</h3>
+          <p class="muted">
+            Run the existing surprising-vote explanation flow for every currently surprising vote
+            that does not yet have its own explanation. Already explained votes will be skipped.
+          </p>
+
+          <div class="action-stack">
+            <button
+              id="admin-surprising-vote-explanations-button"
+              class="primary-button"
+              type="button"
+            >
+              Explain all unexplained surprising votes
+            </button>
+          </div>
+
+          <div id="admin-surprising-vote-explanations-status" class="updates-status is-neutral">
+            <p class="muted">No bulk surprising-vote explanation run has been started yet.</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section admin-side-panel__section--danger-zone-header">
+          <div class="admin-side-panel__danger-header">
+            <h3>Total Reconstruction</h3>
+            <p>(Don't touch!)</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section admin-side-panel__section--danger-item">
+          <h3>Recreate All Law Axes Profiles</h3>
+          <div class="admin-danger-box">
+            <strong>WARNING</strong>
+            <p>
+              This process will take a long time, may cost money, and will delete and override the
+              existing <code>axes analysis</code> for all third-reading laws.
+            </p>
+          </div>
+          <p class="muted">
+            Use this only when you intentionally want to regenerate every law’s axes profile from
+            scratch.
+          </p>
+
+          <div class="action-stack">
+            <button id="admin-law-analysis-rebuild-button" class="primary-button" type="button">
+              Recreate all law axes profiles
+            </button>
+          </div>
+
+          <div id="admin-law-analysis-rebuild-status" class="updates-status is-neutral">
+            <p class="muted">No destructive full law-analysis rebuild has been started yet.</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section admin-side-panel__section--danger-item">
+          <h3>Recreate Small Quotes Files</h3>
+          <div class="admin-danger-box">
+            <strong>WARNING</strong>
+            <p>
+              This process will take a long time, may cost money, and will delete and override the
+              existing <code>small quotes</code> file for every MK.
+            </p>
+          </div>
+          <p class="muted">
+            Use this only when you intentionally want to rebuild every MK’s small quotes file from
+            the most recent ten qualifying protocols.
+          </p>
+
+          <div class="action-stack">
+            <button id="admin-small-quotes-rebuild-button" class="primary-button" type="button">
+              Recreate all small quotes files
+            </button>
+          </div>
+
+          <div id="admin-small-quotes-status" class="updates-status is-neutral">
+            <p class="muted">No destructive small-quotes rebuild has been started yet.</p>
+          </div>
+        </div>
+
+        <div class="admin-side-panel__section admin-side-panel__section--danger-item">
+          <h3>Recreate All MK Profiles</h3>
+          <div class="admin-danger-box">
+            <strong>WARNING</strong>
+            <p>
+              This process will take a long time, may cost money, and will delete and override the
+              existing MK profiles generated from the <code>small quotes</code> files.
+            </p>
+          </div>
+          <p class="muted">
+            Use this only when you intentionally want to regenerate every MK political profile from
+            scratch.
+          </p>
+
+          <div class="action-stack">
+            <button id="admin-member-profiles-rebuild-button" class="primary-button" type="button">
+              Recreate all MK profiles
+            </button>
+          </div>
+
+          <div id="admin-member-profiles-rebuild-status" class="updates-status is-neutral">
+            <p class="muted">No destructive MK-profile rebuild has been started yet.</p>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/home.js" defer></script>
+  </body>
+</html>

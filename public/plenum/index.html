@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ישיבות מליאה</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero-card source-browser-hero">
+        <div class="source-browser-hero__copy">
+          <p id="source-browser-eyebrow" class="eyebrow">טוען...</p>
+          <h1 id="source-browser-title">טוען את הדף...</h1>
+          <p id="source-browser-description" class="hero-copy">המערכת טוענת את פרטי המדור ואת רשימת הפריטים.</p>
+          <p id="source-browser-note" class="muted"></p>
+        </div>
+        <div class="hero-stats source-browser-stats">
+          <article class="stat-card">
+            <span id="source-browser-total-label" class="stat-label">פריטים</span>
+            <strong id="source-browser-total">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span id="source-browser-secondary-label" class="stat-label">טווח שנים</span>
+            <strong id="source-browser-secondary">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span id="source-browser-tertiary-label" class="stat-label">עדכון אחרון</span>
+            <strong id="source-browser-tertiary">טוען...</strong>
+          </article>
+        </div>
+        <div id="source-browser-methodology" class="source-browser-methodology" hidden></div>
+      </section>
+
+      <section class="layout-grid source-browser-layout">
+        <aside class="panel sticky-panel source-browser-sidebar">
+          <h2>חיפוש וסינון</h2>
+          <label class="field">
+            <span id="source-browser-search-label">חיפוש</span>
+            <input id="source-browser-search" type="search" placeholder="" />
+          </label>
+          <label id="source-browser-year-field" class="field">
+            <span>שנה</span>
+            <select id="source-browser-year">
+              <option value="">כל השנים</option>
+            </select>
+          </label>
+          <div id="source-browser-committee-filters" class="filters-group" hidden>
+            <label class="field">
+              <span>סוג ועדה</span>
+              <select id="source-browser-committee-type">
+                <option value="">כל הסוגים</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>שם הוועדה</span>
+              <select id="source-browser-committee-name">
+                <option value="">כל הוועדות</option>
+              </select>
+            </label>
+          </div>
+        </aside>
+
+        <section class="panel source-browser-results">
+          <div class="list-header">
+            <div class="list-header__copy">
+              <p id="source-browser-list-eyebrow" class="eyebrow">טוען...</p>
+              <h2 id="source-browser-list-title">טוען את הרשימה...</h2>
+            </div>
+            <p id="source-browser-results-summary" class="muted">טוען רשימה...</p>
+          </div>
+          <div id="source-browser-list" class="protocol-grid"></div>
+          <div class="load-more-row">
+            <button id="source-browser-load-more" class="secondary-button" type="button">הצג עוד</button>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/explorer.js" defer></script>
+  </body>
+</html>

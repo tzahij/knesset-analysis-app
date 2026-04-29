@@ -1,0 +1,60 @@
+services:
+  knesset-reader:
+    build: .
+    container_name: knesset-protocol-reader
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      TRUST_PROXY: "1"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
+      AUTH_BASIC_USERNAME: ${AUTH_BASIC_USERNAME:-}
+      AUTH_BASIC_PASSWORD: ${AUTH_BASIC_PASSWORD:-}
+      AUTH_BASIC_DISPLAY_NAME: ${AUTH_BASIC_DISPLAY_NAME:-}
+      AUTH_ADVANCED_USERNAME: ${AUTH_ADVANCED_USERNAME:-}
+      AUTH_ADVANCED_PASSWORD: ${AUTH_ADVANCED_PASSWORD:-}
+      AUTH_ADVANCED_DISPLAY_NAME: ${AUTH_ADVANCED_DISPLAY_NAME:-}
+      AUTH_ADMIN_USERNAME: ${AUTH_ADMIN_USERNAME:-}
+      AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD:-}
+      AUTH_ADMIN_DISPLAY_NAME: ${AUTH_ADMIN_DISPLAY_NAME:-}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-auto}
+    expose:
+      - "3000"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: caddy:2
+    container_name: knesset-protocol-reader-caddy
+    restart: unless-stopped
+    depends_on:
+      knesset-reader:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

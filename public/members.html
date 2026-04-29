@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>חברי הכנסת</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <a class="back-link" href="/">חזרה לדף הראשי</a>
+
+      <section class="hero-card">
+        <p class="eyebrow">Knesset Members</p>
+        <h1>חברי הכנסת</h1>
+        <p class="hero-copy">
+          עמוד זה מרכז את חברי הכנסת לפי סיעות, ובונה אינדקס מקומי של פרוטוקולי מליאה
+          ופרוטוקולי ועדות שבהם הם מופיעים כדוברים, החל מתאריך 2022-01-01. הסריקה
+          הראשונית יכולה להימשך זמן מה, אבל התוצאות שכבר נמצאו מוצגות מיד וממשיכות
+          להתעדכן תוך כדי.
+        </p>
+
+        <div class="hero-stats">
+          <article class="stat-card">
+            <span class="stat-label">חברי כנסת</span>
+            <strong id="member-count">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">פרוטוקולים שנסרקו</span>
+            <strong id="indexed-count">טוען...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">עדכון אחרון</span>
+            <strong id="indexed-date">טוען...</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="layout-grid">
+        <aside class="panel sticky-panel">
+          <h2>חיפוש וסטטוס</h2>
+          <label class="field">
+            <span>חיפוש לפי שם חבר הכנסת או שם הסיעה</span>
+            <input id="member-search-input" type="search" placeholder="למשל נתניהו, יש עתיד, רוטמן" />
+          </label>
+
+          <button id="members-refresh-button" class="secondary-button" type="button">
+            רענון נתוני חברי הכנסת
+          </button>
+
+          <div id="members-status" class="updates-status">
+            <p class="muted">טוען את מצב אינדקס חברי הכנסת...</p>
+          </div>
+          <button
+            id="member-files-build-all-button"
+            class="primary-button"
+            type="button"
+            data-requires-role="advanced"
+          >
+            צור קובצי אמירות גדולים וקטנים לכל חברי הכנסת
+          </button>
+
+          <div id="member-files-bulk-status" class="updates-status is-neutral">
+            <p class="muted">טוען את מצב יצירת קבצי האמירות...</p>
+          </div>
+
+          <div class="action-stack">
+            <button
+              id="member-analyses-build-small-button"
+              class="primary-button"
+              type="button"
+              data-requires-role="admin"
+            >
+              נתח את כל חברי הכנסת מהקובץ הקטן
+            </button>
+            <button
+              id="member-analyses-build-large-button"
+              class="primary-button"
+              type="button"
+              data-requires-role="admin"
+            >
+              נתח את כל חברי הכנסת מהקובץ הגדול
+            </button>
+          </div>
+
+          <div id="member-analyses-bulk-status" class="updates-status is-neutral">
+            <p class="muted">טוען את מצב בניית הניתוחים...</p>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="list-header">
+            <div>
+              <p class="eyebrow">Members</p>
+              <h2>בחרו חבר כנסת</h2>
+              <p class="muted">כל עמוד אישי מפנה לפרוטוקולים שבהם חבר הכנסת זוהה כדובר החל מ-2022.</p>
+            </div>
+            <p id="party-summary" class="muted">טוען רשימה...</p>
+          </div>
+
+          <div id="party-list" class="party-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/site-nav.js" defer></script>
+    <script src="/auth-widget.js" defer></script>
+    <script src="/member-current-status.js" defer></script>
+    <script src="/members.js" defer></script>
+  </body>
+</html>
