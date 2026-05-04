@@ -33,55 +33,6 @@
             <p class="muted">טוען את מצב אינדקס חברי הכנסת...</p>
           </div>
 
-          <div class="member-file-panel">
-            <h2>קובצי האמירות</h2>
-            <p class="muted">
-              לכל חבר כנסת יש שני קבצים: קובץ מלא מכל התקופה, וקובץ קטן המבוסס רק על עשרת הפרוטוקולים האחרונים עם ציטוטי 50 מילים ומעלה.
-            </p>
-            <div class="member-file-grid">
-              <section class="member-file-card">
-                <div class="member-file-card__header">
-                  <h3>קובץ אמירות מלא</h3>
-                  <p class="muted">כל הציטוטים בני 50 מילים ומעלה, מכל הפרוטוקולים הרלוונטיים.</p>
-                </div>
-                <div id="member-file-full-status" class="updates-status is-neutral">
-                  <p class="muted">טוען את מצב הקובץ המלא...</p>
-                </div>
-                <div class="action-stack">
-                  <a
-                    id="member-file-full-download-link"
-                    class="secondary-button"
-                    href="#"
-                    hidden
-                    download
-                  >
-                    הורד את הקובץ המלא
-                  </a>
-                </div>
-              </section>
-
-              <section class="member-file-card member-file-card--small">
-                <div class="member-file-card__header">
-                  <h3>קובץ אמירות קטן</h3>
-                  <p class="muted">רק עשרת הפרוטוקולים האחרונים שבהם נשמרו ציטוטים של 50 מילים ומעלה.</p>
-                </div>
-                <div id="member-file-small-status" class="updates-status is-neutral">
-                  <p class="muted">טוען את מצב הקובץ הקטן...</p>
-                </div>
-                <div class="action-stack">
-                  <a
-                    id="member-file-small-download-link"
-                    class="secondary-button"
-                    href="#"
-                    hidden
-                    download
-                  >
-                    הורד את הקובץ הקטן
-                  </a>
-                </div>
-              </section>
-            </div>
-          </div>
         </aside>
 
         <article class="reader-panel panel">
@@ -133,46 +84,17 @@
               <div>
                 <p class="eyebrow">Analysis</p>
                 <h2>ניתוח פוליטי של חבר הכנסת</h2>
-                <p id="member-analysis-summary" class="muted"></p>
               </div>
             </div>
 
-            <div class="analysis-source-tabs" role="tablist" aria-label="סוג ניתוח">
-              <button
-                id="member-analysis-source-full-tab"
-                class="source-tab"
-                type="button"
-                role="tab"
-                aria-selected="false"
-              >
-                ניתוח מהקובץ המלא
-              </button>
-              <button
-                id="member-analysis-source-small-tab"
-                class="source-tab is-active"
-                type="button"
-                role="tab"
-                aria-selected="true"
-              >
-                ניתוח מהקובץ הקטן
-              </button>
-            </div>
-
-            <div id="member-analysis-disclaimer" class="analysis-source-disclaimer" hidden></div>
+            <!-- IDs kept so member.js doesn't crash, but elements are hidden -->
+            <button id="member-analysis-source-full-tab" hidden></button>
+            <button id="member-analysis-source-small-tab" hidden></button>
+            <div id="member-analysis-disclaimer" hidden></div>
+            <button id="member-analysis-build-button" hidden></button>
 
             <div id="member-analysis-status" class="updates-status is-neutral">
               <p class="muted">טוען את מצב הניתוח...</p>
-            </div>
-
-            <div class="action-stack">
-              <button
-                id="member-analysis-build-button"
-                class="primary-button"
-                type="button"
-                data-requires-role="admin"
-              >
-                צור ניתוח לחבר הכנסת הזה
-              </button>
             </div>
 
             <div id="member-analysis-graph" class="analysis-graph" hidden></div>
@@ -188,42 +110,14 @@
               </div>
             </div>
 
-            <div class="analysis-source-tabs" role="tablist" aria-label="סוג הציטוטים הנבחרים">
-              <button
-                id="member-highlights-source-full-tab"
-                class="source-tab"
-                type="button"
-                role="tab"
-                aria-selected="false"
-              >
-                ציטוטים מהקובץ המלא
-              </button>
-              <button
-                id="member-highlights-source-small-tab"
-                class="source-tab is-active"
-                type="button"
-                role="tab"
-                aria-selected="true"
-              >
-                ציטוטים מהקובץ הקטן
-              </button>
-            </div>
-
-            <div id="member-highlights-disclaimer" class="analysis-source-disclaimer" hidden></div>
+            <!-- IDs kept so member.js doesn't crash, but elements are hidden -->
+            <button id="member-highlights-source-full-tab" hidden></button>
+            <button id="member-highlights-source-small-tab" hidden></button>
+            <div id="member-highlights-disclaimer" hidden></div>
+            <button id="member-highlights-build-button" hidden></button>
 
             <div id="member-highlights-status" class="updates-status is-neutral">
               <p class="muted">טוען את מצב הציטוטים הנבחרים...</p>
-            </div>
-
-            <div class="action-stack">
-              <button
-                id="member-highlights-build-button"
-                class="primary-button"
-                type="button"
-                data-requires-role="admin"
-              >
-                חלץ ציטוטים נבחרים לחבר הכנסת הזה
-              </button>
             </div>
 
             <div id="member-highlights-content" class="analysis-highlights"></div>

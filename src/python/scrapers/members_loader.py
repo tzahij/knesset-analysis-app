@@ -9,9 +9,6 @@ import concurrent.futures
 import base64
 import sys
 
-# Ensure we can import from the current directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from psycopg2.extras import Json
 from member_registry import get_member_registry, resolve_member_by_name
 
@@ -180,8 +177,9 @@ def extract_social_links_from_html(html):
     return contacts
 
 class MembersLoader:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, conn):
         self.data_dir = data_dir
+        self.conn = conn
         self.directory_path = os.path.join(data_dir, "member-contact-directory.json")
         
     def resolve_local_member(self, official_name, members_by_route_slug):
@@ -280,7 +278,7 @@ class MembersLoader:
                     }
         return None
 
-    def build_directory(self, conn):
+    def build_directory(self):
         print("Starting Members Directory sync...")
         registry = get_member_registry().get("members", [])
         members_by_route_slug = {m.get("routeSlug", m.get("slug")): m for m in registry}
@@ -347,7 +345,7 @@ class MembersLoader:
 
         print(f"Syncing {len(members)} members to PostgreSQL...")
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 # Sync parties first
                 parties = set()
                 for m in members.values():
@@ -377,7 +375,19 @@ class MembersLoader:
                             contacts = EXCLUDED.contacts,
                             updated_at = CURRENT_TIMESTAMP
                     """, (slug, m.get("name"), party_id, Json(contacts)))
-            conn.commit()
+            self.conn.commit()
             print("Successfully saved Members Directory to database.")
         except Exception as e:
             print(f"Database error while saving members: {e}")
+
+if __name__ == "__main__":
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    sys.path.insert(0, project_root)
+    from src.python.data.database import get_db_connection
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
+    conn = get_db_connection()
+    try:
+        loader = MembersLoader(data_dir, conn)
+        loader.build_directory()
+    finally:
+        conn.close()

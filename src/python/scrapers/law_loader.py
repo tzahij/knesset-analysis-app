@@ -4,9 +4,6 @@ from datetime import datetime
 import pytz
 import sys
 
-# Ensure we can import from the current directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from utils import (
     format_date_parts,
     normalize_search_text,
@@ -204,8 +201,9 @@ def build_query(skip):
     return f"$filter=StatusID eq {FINAL_READING_STATUS_ID}&$expand=KNS_Status,KNS_DocumentBills&$orderby=PublicationDate desc&$top={PAGE_SIZE}&$skip={skip}&$format=json"
 
 class LawLoader:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, conn):
         self.data_dir = data_dir
+        self.conn = conn
         self.cache_file = os.path.join(data_dir, "laws.json")
 
     def fetch_json(self, url):
@@ -213,9 +211,9 @@ class LawLoader:
         response.raise_for_status()
         return response.json()
 
-    def load_existing_cache(self, conn):
+    def load_existing_cache(self):
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 cur.execute("SELECT bill_id FROM law")
                 rows = cur.fetchall()
             return [{"billId": str(r[0])} for r in rows]
@@ -223,8 +221,8 @@ class LawLoader:
             print(f"Error loading cache from DB: {e}")
             return []
 
-    def fetch_recent_passed_laws(self, conn):
-        existing_items = self.load_existing_cache(conn)
+    def fetch_recent_passed_laws(self):
+        existing_items = self.load_existing_cache()
         existing_by_bill_id = {item["billId"]: item for item in existing_items}
         
         all_new_items = []
@@ -376,11 +374,11 @@ class LawLoader:
             print(f"Error downloading law {kind} for bill {law['billId']}: {e}")
             return None
 
-    def sync(self, conn):
-        items = self.fetch_recent_passed_laws(conn)
+    def sync(self):
+        items = self.fetch_recent_passed_laws()
         
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 for law in items:
                     bill_id = str(law.get("billId"))
                     if not law.get("title") or not law.get("publicationDate"):
@@ -410,13 +408,20 @@ class LawLoader:
                             file_type = EXCLUDED.file_type,
                             url = EXCLUDED.url
                     """, (bill_id, law.get("title"), pub_date, law.get("knessetNumber"), file_type, url))
-            conn.commit()
+            self.conn.commit()
             print(f"Saved {len(items)} laws to database.")
         except Exception as e:
             print(f"Database error while saving laws: {e}")
         return items
 
 if __name__ == "__main__":
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    sys.path.insert(0, project_root)
+    from src.python.data.database import get_db_connection
     data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
-    loader = LawLoader(data_dir)
-    loader.sync()
+    conn = get_db_connection()
+    try:
+        loader = LawLoader(data_dir, conn)
+        loader.sync()
+    finally:
+        conn.close()

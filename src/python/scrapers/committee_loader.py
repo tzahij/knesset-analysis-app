@@ -6,9 +6,6 @@ from dateutil.relativedelta import relativedelta
 import pytz
 import sys
 
-# Ensure we can import from the current directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from utils import (
     format_date_parts,
     normalize_search_text,
@@ -99,8 +96,9 @@ def normalize_committee_protocol_record(entry):
     }
 
 class CommitteeLoader:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, conn):
         self.data_dir = data_dir
+        self.conn = conn
         self.window_start = create_five_years_ago_start_date()
         date_str = self.window_start.strftime("%Y-%m-%dT00:00:00")
         self.window_start_literal = f"datetime'{date_str}'"
@@ -115,9 +113,9 @@ class CommitteeLoader:
         response.raise_for_status()
         return response.text
 
-    def get_latest_update_date(self, conn):
+    def get_latest_update_date(self):
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 cur.execute("SELECT MAX(last_updated_date) FROM protocol WHERE source_type = 'committee'")
                 row = cur.fetchone()
                 if row and row[0]:
@@ -134,8 +132,8 @@ class CommitteeLoader:
         raw_count = self.fetch_text(count_url)
         return int(raw_count)
 
-    def fetch_protocols_metadata(self, conn):
-        latest_date = self.get_latest_update_date(conn)
+    def fetch_protocols_metadata(self):
+        latest_date = self.get_latest_update_date()
         
         filter_query = f"GroupTypeID eq {GROUP_TYPE_ID} and KNS_CommitteeSession/StartDate ge {self.window_start_literal}"
         
@@ -254,14 +252,14 @@ class CommitteeLoader:
             print(f"Error downloading committee protocol {doc_id}: {e}")
             return None
 
-    def sync(self, conn):
-        items = self.fetch_protocols_metadata(conn)
+    def sync(self):
+        items = self.fetch_protocols_metadata()
         if not items:
             return []
         
         # Save to DB
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 for item in items:
                     doc_id = str(item.get("documentId"))
                     p_date = item.get("startDate")
@@ -269,7 +267,7 @@ class CommitteeLoader:
                         p_date = datetime.fromisoformat(p_date.replace("Z", "+00:00")).replace(tzinfo=None)
                     
                     file_type = str(item.get("applicationLabel", "")).lower()
-                    if file_type not in ["pdf", "doc"]:
+                    if file_type not in ["pdf", "doc", "docx"]:
                         file_type = "doc"
                         
                     title = item.get("title", "")
@@ -289,7 +287,7 @@ class CommitteeLoader:
                             last_updated_date = EXCLUDED.last_updated_date,
                             url = EXCLUDED.url
                     """, (doc_id, "committee", item.get("knessetNumber"), p_date, item.get("sessionNumber"), committee_name, file_type, item.get("fileUrl"), last_updated))
-            conn.commit()
+            self.conn.commit()
             print(f"Saved {len(items)} new/updated committee protocols to database.")
         except Exception as e:
             print(f"Database error while saving committee protocols: {e}")
@@ -297,6 +295,13 @@ class CommitteeLoader:
         return items
 
 if __name__ == "__main__":
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    sys.path.insert(0, project_root)
+    from src.python.data.database import get_db_connection
     data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
-    loader = CommitteeLoader(data_dir)
-    loader.sync()
+    conn = get_db_connection()
+    try:
+        loader = CommitteeLoader(data_dir, conn)
+        loader.sync()
+    finally:
+        conn.close()

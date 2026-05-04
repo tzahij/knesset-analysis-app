@@ -6,9 +6,6 @@ import requests
 import concurrent.futures
 import sys
 
-# Ensure we can import from the current directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 VOTES_API_BASE_URL = "https://knesset.gov.il/WebSiteApi/knessetapi/Votes"
 PRINT_API_BASE_URL = "https://knesset.gov.il/WebSiteApi/knessetapi/PrintPdf"
 LAW_VOTE_CACHE_VERSION = 1
@@ -46,8 +43,9 @@ def is_third_reading_acceptance(vote_record):
     return True
 
 class VotesLoader:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, conn):
         self.data_dir = data_dir
+        self.conn = conn
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": "Mozilla/5.0 Codex", "Content-Type": "application/json;charset=UTF-8"})
 
@@ -163,11 +161,11 @@ class VotesLoader:
             "cacheKey": f"{law.get('billId')}::{law.get('publicationDate','')}::{normalized_title}"
         }
 
-    def sync_votes(self, executor, conn):
+    def sync_votes(self, executor):
         print("Starting Votes sync...")
         
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 # Only check laws that haven't been successfully matched or definitively unmatched
                 cur.execute("SELECT bill_id, title, publication_date FROM law WHERE vote_match_status = 'pending'")
                 rows = cur.fetchall()
@@ -221,7 +219,7 @@ class VotesLoader:
             
         # Save to DB
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 for res in results:
                     if res.get("status") != "matched": continue
                     vote = res.get("vote")
@@ -260,21 +258,34 @@ class VotesLoader:
                                     ON CONFLICT (vote_id, member_slug) DO UPDATE SET vote_type = EXCLUDED.vote_type
                                 """, (vote_id, slug, vote_type))
                             except Exception as e:
-                                conn.rollback()
+                                self.conn.rollback()
                                 continue
-            conn.commit()
+            self.conn.commit()
             print("Saved votes to database.")
             
             # Now update the status for all processed laws
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 for res in results:
                     cur.execute(
                         "UPDATE law SET vote_match_status = %s WHERE bill_id = %s",
                         (res.get("status", "pending"), res.get("billId"))
                     )
-            conn.commit()
+            self.conn.commit()
             
         except Exception as e:
             print(f"Database error while saving votes: {e}")
 
         print(f"Finished Votes sync. Matched {len([r for r in results if r.get('status') == 'matched'])} new laws.")
+
+if __name__ == "__main__":
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    sys.path.insert(0, project_root)
+    from src.python.data.database import get_db_connection
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
+    conn = get_db_connection()
+    try:
+        loader = VotesLoader(data_dir, conn)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            loader.sync_votes(executor)
+    finally:
+        conn.close()

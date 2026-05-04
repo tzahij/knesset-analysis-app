@@ -5,9 +5,6 @@ from datetime import datetime
 import pytz
 import sys
 
-# Ensure we can import from the current directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from utils import (
     format_date_parts,
     normalize_search_text,
@@ -91,8 +88,9 @@ def normalize_protocol_record(entry):
 
 
 class KnessetLoader:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, conn):
         self.data_dir = data_dir
+        self.conn = conn
 
     def fetch_json(self, url):
         response = requests.get(url, timeout=30)
@@ -104,9 +102,9 @@ class KnessetLoader:
         response.raise_for_status()
         return response.text
 
-    def get_latest_update_date(self, conn):
+    def get_latest_update_date(self):
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 cur.execute("SELECT MAX(last_updated_date) FROM protocol WHERE source_type = 'plenum'")
                 row = cur.fetchone()
                 # PostgreSQL returns datetime if it's a TIMESTAMP column
@@ -124,13 +122,12 @@ class KnessetLoader:
         raw_count = self.fetch_text(count_url)
         return int(raw_count)
 
-    def fetch_protocols_metadata(self, conn):
-        latest_date = self.get_latest_update_date(conn)
+    def fetch_protocols_metadata(self):
+        latest_date = self.get_latest_update_date()
 
         filter_query = f"GroupTypeID eq {GROUP_TYPE_ID}"
         if latest_date:
             # Format: datetime'YYYY-MM-DDTHH:MM:SS'
-            # We add 1 second to avoid fetching the exact same record if it hasn't changed
             date_str = latest_date.strftime("%Y-%m-%dT%H:%M:%S")
             filter_query += f" and LastUpdatedDate gt datetime'{date_str}'"
             print(f"Fetching updates since {date_str}...")
@@ -251,14 +248,14 @@ class KnessetLoader:
             print(f"Error downloading protocol {doc_id}: {e}")
             return None
 
-    def sync(self, conn):
-        items = self.fetch_protocols_metadata(conn)
+    def sync(self):
+        items = self.fetch_protocols_metadata()
         if not items:
             return []
             
         # Save to DB
         try:
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 for item in items:
                     doc_id = str(item.get("documentId"))
                     p_date = item.get("startDate")
@@ -266,7 +263,7 @@ class KnessetLoader:
                         p_date = datetime.fromisoformat(p_date.replace("Z", "+00:00")).replace(tzinfo=None)
                     
                     file_type = str(item.get("applicationLabel", "")).lower()
-                    if file_type not in ["pdf", "doc"]:
+                    if file_type not in ["pdf", "doc", "docx"]:
                         file_type = "doc"
                         
                     last_updated = item.get("lastUpdatedDate")
@@ -283,7 +280,7 @@ class KnessetLoader:
                             last_updated_date = EXCLUDED.last_updated_date,
                             url = EXCLUDED.url
                     """, (doc_id, "plenum", item.get("knessetNumber"), p_date, item.get("sessionNumber"), file_type, item.get("fileUrl"), last_updated))
-            conn.commit()
+            self.conn.commit()
             print(f"Saved {len(items)} new/updated plenum protocols to database.")
         except Exception as e:
             print(f"Database error while saving plenum protocols: {e}")
@@ -292,8 +289,15 @@ class KnessetLoader:
 
 
 if __name__ == "__main__":
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    sys.path.insert(0, project_root)
+    from src.python.data.database import get_db_connection
     data_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
     )
-    loader = KnessetLoader(data_dir)
-    loader.sync()
+    conn = get_db_connection()
+    try:
+        loader = KnessetLoader(data_dir, conn)
+        loader.sync()
+    finally:
+        conn.close()

@@ -7,14 +7,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import Json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import docx
 import pdfplumber
-
-# Add project root to path for imports
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 # Setup logging
 logger = logging.getLogger("KnessetProcessor")
@@ -59,12 +55,14 @@ def extract_text(file_path):
     return ""
 
 class KnessetProcessor:
-    def __init__(self, data_dir, model_name="gemini-1.5-flash"):
+    def __init__(self, data_dir, conn, model_name="gemini-2.5-flash"):
         self.data_dir = data_dir
+        self.conn = conn
         self.raw_dir = os.path.join(data_dir, "law-raw")
         self.analysis_dir = os.path.join(data_dir, "law-analyses")
         os.makedirs(self.analysis_dir, exist_ok=True)
 
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
         load_dotenv(os.path.join(project_root, ".env"))
         load_dotenv(os.path.join(project_root, ".env.local"), override=True)
 
@@ -72,26 +70,25 @@ class KnessetProcessor:
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in environment")
 
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = model_name
 
-    def analyze_pending_laws(self, conn, dry_run=False):
+    def analyze_pending_laws(self, dry_run=False):
         logger.info("--- Analyzing laws with AI ---")
-        file_map = self._build_file_map()
         
-        with conn.cursor() as cur:
-            cur.execute("SELECT bill_id, title, summary_law FROM law WHERE status IS NULL OR status != 'analyzed'")
+        with self.conn.cursor() as cur:
+            # Only select laws that have a downloaded local_file_path
+            cur.execute("SELECT bill_id, title, summary_law, local_file_path FROM law WHERE (status IS NULL OR status != 'analyzed') AND local_file_path IS NOT NULL")
             pending = cur.fetchall()
 
         logger.info(f"Found {len(pending)} laws requiring analysis.")
-        for bill_id, title, summary in pending:
+        for bill_id, title, summary, local_path in pending:
             if dry_run:
                 logger.info(f"[DRY RUN] Would analyze bill {bill_id}: {title}")
                 continue
 
-            local_path = file_map.get(str(bill_id))
-            if not local_path:
-                logger.warning(f"No local file found for bill {bill_id}, skipping analysis.")
+            if not os.path.exists(local_path):
+                logger.warning(f"File path from DB does not exist for bill {bill_id}: {local_path}, skipping analysis.")
                 continue
 
             logger.info(f"Analyzing bill {bill_id}: {title}...")
@@ -99,48 +96,37 @@ class KnessetProcessor:
             
             analysis = self._call_gemini(title, summary, content)
             if analysis:
-                self._update_db(conn, bill_id, analysis)
+                self._update_db(bill_id, analysis)
                 self._save_markdown(bill_id, title, analysis)
                 logger.info(f"Successfully processed bill {bill_id}.")
             
             time.sleep(1) # Rate limit protection
 
-    def _build_file_map(self):
-        mapping = {}
-        if not os.path.exists(self.raw_dir): return mapping
-        for file in os.listdir(self.raw_dir):
-            if file.endswith(".json"):
-                try:
-                    with open(os.path.join(self.raw_dir, file), "r", encoding="utf-8") as f:
-                        meta = json.load(f)
-                        bill_id = str(meta.get("billId"))
-                        local_path = meta.get("localFilePath")
-                        if bill_id and local_path:
-                            if bill_id not in mapping or local_path.lower().endswith(".pdf"):
-                                mapping[bill_id] = local_path
-                except: continue
-        return mapping
+
 
     def _call_gemini(self, title, summary, content):
         prompt = build_analysis_instructions()
         input_data = f"כותרת: {title}\nתקציר: {summary}\n\nנוסח החוק:\n{content[:50000]}"
         try:
-            response = self.model.generate_content(
-                f"{prompt}\n\nחומר לניתוח:\n{input_data}",
-                generation_config={"response_mime_type": "application/json"},
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=f"{prompt}\n\nחומר לניתוח:\n{input_data}",
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                ),
             )
             return json.loads(response.text)
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
             return None
 
-    def _update_db(self, conn, bill_id, analysis):
-        with conn.cursor() as cur:
+    def _update_db(self, bill_id, analysis):
+        with self.conn.cursor() as cur:
             cur.execute(
-                "UPDATE law SET analysis_summary = %s, status = 'analyzed' WHERE bill_id = %s",
-                (Json(analysis), str(bill_id)),
+                "UPDATE law SET analysis_summary = %s, status = 'analyzed', analysis_model = %s WHERE bill_id = %s",
+                (Json(analysis), self.model_name, str(bill_id)),
             )
-        conn.commit()
+        self.conn.commit()
 
     def _save_markdown(self, bill_id, title, analysis):
         md_path = os.path.join(self.analysis_dir, f"{bill_id}__analysis.md")
@@ -156,3 +142,15 @@ class KnessetProcessor:
                 lines.append("")
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
+
+if __name__ == "__main__":
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    sys.path.insert(0, project_root)
+    from src.python.data.database import get_db_connection
+    data_dir = os.path.abspath(os.path.join(project_root, "data"))
+    conn = get_db_connection()
+    try:
+        processor = KnessetProcessor(data_dir, conn)
+        processor.analyze_pending_laws()
+    finally:
+        conn.close()
