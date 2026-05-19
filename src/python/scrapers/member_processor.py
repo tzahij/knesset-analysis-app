@@ -277,17 +277,18 @@ class MemberProcessor:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT utterance_text
+                SELECT ranked.utterance_text
                 FROM (
                     SELECT
-                        utterance_text,
-                        word_count * POWER(
+                        mu.utterance_text,
+                        mu.word_count * POWER(
                             %(one_minus_decay)s,
-                            GREATEST(0, (CURRENT_DATE - protocol_date)::float / 365.0)
+                            GREATEST(0, (CURRENT_DATE - pr.protocol_date::date)::float / 365.0)
                         ) AS score
-                    FROM member_utterance
-                    WHERE member_slug = %(slug)s
-                      AND word_count >= %(min_words)s
+                    FROM member_utterance mu
+                    JOIN protocol pr ON pr.document_id = mu.protocol_id
+                    WHERE mu.member_slug = %(slug)s
+                      AND mu.word_count >= %(min_words)s
                 ) ranked
                 ORDER BY score DESC
                 LIMIT %(limit)s
@@ -351,9 +352,9 @@ class MemberProcessor:
         filename = f"{slug}__analysis__from-{MEMBER_PROTOCOL_SINCE_DATE}.md"
         path = os.path.join(self.analysis_dir, filename)
 
-        profile = analysis.get('overallProfile', {})
-        blunt = profile.get('bluntProfile', {})
-        hist = profile.get('historicalContext', {})
+        profile = analysis.get('overallProfile') if isinstance(analysis.get('overallProfile'), dict) else {}
+        blunt = profile.get('bluntProfile') if isinstance(profile.get('bluntProfile'), dict) else {}
+        hist = profile.get('historicalContext') if isinstance(profile.get('historicalContext'), dict) else {}
 
         lines = [
             f"# ניתוח פוליטי: {name}",

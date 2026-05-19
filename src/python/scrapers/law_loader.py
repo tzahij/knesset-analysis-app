@@ -399,15 +399,15 @@ class LawLoader:
                         url = law.get("wordDocument", {}).get("fileUrl", "")
                         
                     cur.execute("""
-                        INSERT INTO law (bill_id, title, publication_date, knesset_number, file_type, url)
+                        INSERT INTO law (bill_id, title, publication_date, file_type, url, summary_law)
                         VALUES (%s, %s, %s, %s, %s, %s)
                         ON CONFLICT (bill_id) DO UPDATE SET
                             title = EXCLUDED.title,
                             publication_date = EXCLUDED.publication_date,
-                            knesset_number = EXCLUDED.knesset_number,
                             file_type = EXCLUDED.file_type,
-                            url = EXCLUDED.url
-                    """, (bill_id, law.get("title"), pub_date, law.get("knessetNumber"), file_type, url))
+                            url = EXCLUDED.url,
+                            summary_law = EXCLUDED.summary_law
+                    """, (bill_id, law.get("title"), pub_date, file_type, url, law.get("summaryLaw", "")))
             self.conn.commit()
             print(f"Saved {len(items)} laws to database.")
         except Exception as e:

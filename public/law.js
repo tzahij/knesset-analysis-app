@@ -208,7 +208,7 @@ function renderSummary(paragraphs) {
         <h2>תיאור החוק</h2>
       </div>
       <div class="law-summary-card__body">
-        ${paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+        ${paragraphs.map((paragraph) => `<p class="formatted-paragraph">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("")}
       </div>
     </section>
   `;
@@ -238,7 +238,7 @@ function renderContent(paragraphs, parseError) {
         <p class="eyebrow">Readable Text</p>
         <h2>נוסח החוק</h2>
       </div>
-      ${paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+      ${paragraphs.map((paragraph) => `<p class="formatted-paragraph">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("")}
     </section>
   `;
 }

@@ -5345,7 +5345,7 @@ button:disabled,
   white-space: pre-wrap;
 }
 
-.protocol-content__paragraph {
+.protocol-content__paragraph, .formatted-paragraph {
   padding: 0.35rem 0.45rem;
   border-radius: 16px;
   transition:
@@ -7299,4 +7299,17 @@ body.auth-dialog-open {
     bottom: 1rem;
     max-height: 48vh;
   }
+}
+. p r o t o c o l - c o n t e n t _ _ p a r a g r a p h   {   m a r g i n - t o p :   0 ;   m a r g i n - b o t t o m :   0 . 2 5 r e m ;   l i n e - h e i g h t :   1 . 4 ;   }
+
+.protocol-content__paragraph, .formatted-paragraph {
+  margin-top: 0;
+  margin-bottom: 0.85rem;
+  line-height: 1.45;
+}
+
+.protocol-content__paragraph, .formatted-paragraph {
+  margin-top: 0;
+  margin-bottom: 0.85rem;
+  line-height: 1.45;
 }

@@ -1,0 +1,158 @@
+{
+  "odata.metadata": "https://knesset.gov.il/Odata/ParliamentInfo.svc/$metadata#KNS_Bill",
+  "value": [
+    {
+      "KNS_DocumentBills": [
+        {
+          "DocumentBillID": "6206472",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_6957067.pdf",
+          "LastUpdatedDate": "2025-05-25T15:04:11.947"
+        },
+        {
+          "DocumentBillID": "6217948",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_6969823.pdf",
+          "LastUpdatedDate": "2025-05-26T12:16:10.38"
+        },
+        {
+          "DocumentBillID": "6257950",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_7014300.pdf",
+          "LastUpdatedDate": "2025-05-29T15:02:27.957"
+        },
+        {
+          "DocumentBillID": "6698919",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_7503430.pdf",
+          "LastUpdatedDate": "2025-07-02T14:32:11.39"
+        },
+        {
+          "DocumentBillID": "7063585",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_7902343.pdf",
+          "LastUpdatedDate": "2025-07-28T15:24:09.69"
+        },
+        {
+          "DocumentBillID": "7860103",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_8842740.pdf",
+          "LastUpdatedDate": "2025-09-25T12:16:12.027"
+        },
+        {
+          "DocumentBillID": "7921094",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_8915916.pdf",
+          "LastUpdatedDate": "2025-09-29T18:00:18.227"
+        },
+        {
+          "DocumentBillID": "7921125",
+          "BillID": 2229878,
+          "GroupTypeID": 59,
+          "GroupTypeDesc": "חומר רקע",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls_bk_8915954.pdf",
+          "LastUpdatedDate": "2025-09-29T18:02:09.54"
+        },
+        {
+          "DocumentBillID": "8581109",
+          "BillID": 2229878,
+          "GroupTypeID": 4,
+          "GroupTypeDesc": "הצעת חוק לקריאה השנייה והשלישית",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls2_9693145.pdf",
+          "LastUpdatedDate": "2025-11-13T13:08:14.243"
+        },
+        {
+          "DocumentBillID": "8581109",
+          "BillID": 2229878,
+          "GroupTypeID": 4,
+          "GroupTypeDesc": "הצעת חוק לקריאה השנייה והשלישית",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_ls2_9693145.pdf",
+          "LastUpdatedDate": "2025-11-10T11:34:38.323"
+        },
+        {
+          "DocumentBillID": "9731581",
+          "BillID": 2229878,
+          "GroupTypeID": 9,
+          "GroupTypeDesc": "חוק - פרסום ברשומות",
+          "ApplicationID": 4,
+          "ApplicationDesc": "PDF",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_lsr_10981603.pdf",
+          "LastUpdatedDate": "2026-01-22T08:56:15.637"
+        },
+        {
+          "DocumentBillID": "9818868",
+          "BillID": 2229878,
+          "GroupTypeID": 8,
+          "GroupTypeDesc": "חוק - נוסח לא רשמי",
+          "ApplicationID": 1,
+          "ApplicationDesc": "DOC",
+          "FilePath": "https://fs.knesset.gov.il/25/law/25_lsh_11076532.docx",
+          "LastUpdatedDate": "2026-01-27T15:22:10.31"
+        }
+      ],
+      "KNS_Status": {
+        "StatusID": 118,
+        "Desc": "התקבלה בקריאה שלישית",
+        "TypeID": 2,
+        "TypeDesc": "הצעת חוק",
+        "OrderTransition": null,
+        "IsActive": null,
+        "LastUpdatedDate": "2013-10-06T14:08:19.8"
+      },
+      "BillID": 2229878,
+      "KnessetNum": 25,
+      "Name": "חוק חדלות פירעון ושיקום כלכלי (תיקון מס' 9), התשפ\"ו-2026",
+      "SubTypeID": 53,
+      "SubTypeDesc": "ממשלתית",
+      "PrivateNumber": null,
+      "CommitteeID": 4191,
+      "StatusID": 118,
+      "Number": 1807,
+      "PostponementReasonID": null,
+      "PostponementReasonDesc": null,
+      "PublicationDate": "2026-01-21T15:45:00",
+      "MagazineNumber": 3488,
+      "PageNumber": 236,
+      "IsContinuationBill": null,
+      "SummaryLaw": null,
+      "PublicationSeriesID": 6071,
+      "PublicationSeriesDesc": "ספר החוקים",
+      "PublicationSeriesFirstCall": null,
+      "LastUpdatedDate": "2026-01-22T09:27:45.22"
+    }
+  ]
+}

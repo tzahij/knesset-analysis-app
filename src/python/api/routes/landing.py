@@ -134,12 +134,13 @@ def get_landing():
                     m.name,
                     p.name AS party_name,
                     mu.utterance_text,
-                    mu.protocol_date,
-                    mu.source_type
+                    pr.protocol_date,
+                    pr.source_type
                 FROM member_utterance mu
                 JOIN member m ON m.slug = mu.member_slug
+                JOIN protocol pr ON pr.document_id = mu.protocol_id
                 LEFT JOIN party p ON p.id = m.party_id
-                ORDER BY mu.protocol_date DESC, random()
+                ORDER BY pr.protocol_date DESC, random()
                 LIMIT 100
             """)
             all_utterances = cur.fetchall()
@@ -306,10 +307,12 @@ def get_spotlight():
             with conn2.cursor() as cur2:
                 cur2.execute("""
                     SELECT
-                        COUNT(DISTINCT protocol_id),
-                        COUNT(DISTINCT CASE WHEN source_type='plenum'    THEN protocol_id END),
-                        COUNT(DISTINCT CASE WHEN source_type='committee' THEN protocol_id END)
-                    FROM member_utterance WHERE member_slug = %s
+                        COUNT(DISTINCT mu.protocol_id),
+                        COUNT(DISTINCT CASE WHEN pr.source_type='plenum'    THEN mu.protocol_id END),
+                        COUNT(DISTINCT CASE WHEN pr.source_type='committee' THEN mu.protocol_id END)
+                    FROM member_utterance mu
+                    JOIN protocol pr ON pr.document_id = mu.protocol_id
+                    WHERE mu.member_slug = %s
                 """, (slug,))
                 total_p, plenum_p, committee_p = cur2.fetchone()
         finally:

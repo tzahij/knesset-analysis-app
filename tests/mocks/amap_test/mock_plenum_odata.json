@@ -1,0 +1,25 @@
+{
+  "odata.metadata": "https://knesset.gov.il/Odata/ParliamentInfo.svc/$metadata#KNS_DocumentPlenumSession",
+  "value": [
+    {
+      "KNS_PlenumSession": {
+        "PlenumSessionID": 2238915,
+        "Number": 358,
+        "KnessetNum": 25,
+        "Name": "ישיבת מליאה בתאריך 19/01/2026 בשעה 16:00",
+        "StartDate": "2026-01-19T16:00:00",
+        "FinishDate": "2026-01-19T21:00:00",
+        "IsSpecialMeeting": false,
+        "LastUpdatedDate": "2026-01-19T20:50:12.28"
+      },
+      "DocumentPlenumSessionID": "10938330",
+      "PlenumSessionID": 2238915,
+      "GroupTypeID": 28,
+      "GroupTypeDesc": "דברי הכנסת",
+      "ApplicationID": 1,
+      "ApplicationDesc": "DOC",
+      "FilePath": "https://fs.knesset.gov.il/25/Plenum/25_ptm_10938330.doc",
+      "LastUpdatedDate": "2026-01-19T23:30:37.687"
+    }
+  ]
+}

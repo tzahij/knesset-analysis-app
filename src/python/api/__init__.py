@@ -54,8 +54,22 @@ def create_app():
             from flask import abort
             abort(404)
         full = os.path.join(app.static_folder, path)
-        if os.path.exists(full) and os.path.isfile(full):
-            return send_from_directory(app.static_folder, path)
+        if os.path.exists(full):
+            if os.path.isfile(full):
+                return send_from_directory(app.static_folder, path)
+            elif os.path.isdir(full):
+                index_path = os.path.join(full, "index.html")
+                if os.path.isfile(index_path):
+                    return send_from_directory(app.static_folder, path.rstrip("/") + "/index.html")
         return send_from_directory(app.static_folder, "index.html")
+
+    @app.teardown_appcontext
+    def teardown_db(exception):
+        from flask import g
+        conn = g.pop('db_conn', None)
+        if conn is not None:
+            from src.python.data.database import _pool
+            if _pool:
+                _pool.putconn(conn)
 
     return app

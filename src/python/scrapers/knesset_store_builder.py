@@ -37,7 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger("StoreBuilder")
 
 
-def run_scraper_stage(conn: Connection, data_dir: str, threads: int) -> None:
+def run_scraper_stage(conn: Connection, data_dir: str, threads: int, mock_api_dir: str = None) -> None:
     logger.info("--- Stage 1: Scraping & Syncing Data ---")
 
     knesset_loader = KnessetLoader(data_dir, conn)
@@ -45,6 +45,63 @@ def run_scraper_stage(conn: Connection, data_dir: str, threads: int) -> None:
     law_loader = LawLoader(data_dir, conn)
     members_loader = MembersLoader(data_dir, conn)
     votes_loader = VotesLoader(data_dir, conn)
+
+    # Dynamic Test Mock Injection
+    if mock_api_dir:
+        import os, json
+        logger.info(f"Test mode enabled: Injecting mocks from {mock_api_dir}")
+
+        def mock_fetch_json(filename, original_fetch):
+            def _fetch(self, url):
+                mock_path = os.path.join(mock_api_dir, filename)
+                if os.path.exists(mock_path):
+                    logger.info(f"[Mock] Loading {filename}")
+                    with open(mock_path, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                logger.warning(f"[Mock] {mock_path} not found. Falling back to real API.")
+                return original_fetch(self, url)
+            return _fetch
+
+        def mock_fetch_count(filename, original_count):
+            def _count(self, filter_query):
+                mock_path = os.path.join(mock_api_dir, filename)
+                if os.path.exists(mock_path):
+                    with open(mock_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    return len(data.get("value", []))
+                return original_count(self, filter_query)
+            return _count
+
+        # Bind mock functions to loader instances
+        law_loader.fetch_json = mock_fetch_json("mock_laws_odata.json", law_loader.__class__.fetch_json).__get__(law_loader)
+        committee_loader.fetch_json = mock_fetch_json("mock_committee_odata.json", committee_loader.__class__.fetch_json).__get__(committee_loader)
+        committee_loader.fetch_protocol_count = mock_fetch_count("mock_committee_odata.json", committee_loader.__class__.fetch_protocol_count).__get__(committee_loader)
+        knesset_loader.fetch_json = mock_fetch_json("mock_plenum_odata.json", knesset_loader.__class__.fetch_json).__get__(knesset_loader)
+        knesset_loader.fetch_protocol_count = mock_fetch_count("mock_plenum_odata.json", knesset_loader.__class__.fetch_protocol_count).__get__(knesset_loader)
+
+        original_vote_headers = votes_loader.__class__.fetch_vote_headers
+        def mock_vote_headers(self, search_window):
+            mock_path = os.path.join(mock_api_dir, "mock_votes_headers.json")
+            if os.path.exists(mock_path):
+                with open(mock_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return original_vote_headers(self, search_window)
+        votes_loader.fetch_vote_headers = mock_vote_headers.__get__(votes_loader)
+
+        original_vote_details = votes_loader.__class__.fetch_vote_details
+        def mock_vote_details(self, vote_id):
+            mock_path = os.path.join(mock_api_dir, f"mock_vote_details_{vote_id}.json")
+            if os.path.exists(mock_path):
+                with open(mock_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return original_vote_details(self, vote_id)
+        votes_loader.fetch_vote_details = mock_vote_details.__get__(votes_loader)
+
+        # Skip member directory build to speed up tests since user provides the member DB
+        def mock_build_directory(self):
+            logger.info("[Mock] Skipping Members Directory sync.")
+        members_loader.build_directory = mock_build_directory.__get__(members_loader)
+
 
     # 1. Metadata Sync
     logger.info("Syncing metadata...")
@@ -114,6 +171,9 @@ def run_scraper_stage(conn: Connection, data_dir: str, threads: int) -> None:
                 except Exception as e:
                     logger.error(f"Task failed for {task_name}: {e}")
 
+    # Commit file updates before syncing votes in case votes rollback
+    conn.commit()
+
     # 3. Votes Sync
     logger.info("Syncing votes...")
     with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -168,6 +228,9 @@ def main():
     parser.add_argument(
         "--data-dir", type=str, default=None, help="Custom data directory"
     )
+    parser.add_argument(
+        "--mock-dir", type=str, default=None, help="Directory containing mock OData JSON files for testing"
+    )
 
     args = parser.parse_args()
 
@@ -182,7 +245,7 @@ def main():
     conn = get_db_connection()
     try:
         if not args.analyze_only:
-            run_scraper_stage(conn, data_dir, args.threads)
+            run_scraper_stage(conn, data_dir, args.threads, args.mock_dir)
 
         if not args.sync_only:
             run_analysis_stage(conn, data_dir, args.model, args.dry_run)

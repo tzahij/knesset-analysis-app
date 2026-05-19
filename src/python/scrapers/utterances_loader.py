@@ -62,10 +62,10 @@ class UtteranceLoader:
                         with self.conn.cursor() as cur:
                             cur.execute('''
                                 INSERT INTO member_utterance (
-                                    member_slug, protocol_id, source_type, protocol_date, utterance_text, word_count
-                                ) VALUES (%s, %s, %s, %s, %s, %s)
+                                    member_slug, protocol_id, utterance_text, word_count
+                                ) VALUES (%s, %s, %s, %s)
                             ''', (
-                                db_slug, document_id, source_type, protocol_date, text, word_count
+                                db_slug, document_id, text, word_count
                             ))
                         self.conn.commit()
                         utterances_added += 1

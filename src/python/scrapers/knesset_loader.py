@@ -181,7 +181,7 @@ class KnessetLoader:
 
     def get_missing_items(self, items):
         # We assume `items` are ONLY the new items we just fetched that need downloading
-        raw_dir = os.path.join(self.data_dir, "raw")
+        raw_dir = os.path.join(self.data_dir, "plenum-raw")
 
         try:
             existing_files = set(os.listdir(raw_dir)) if os.path.exists(raw_dir) else set()
@@ -198,7 +198,7 @@ class KnessetLoader:
         return missing
 
     def ensure_protocol_file(self, protocol):
-        raw_dir = os.path.join(self.data_dir, "raw")
+        raw_dir = os.path.join(self.data_dir, "plenum-raw")
         ensure_directory(raw_dir)
 
         doc_id = str(protocol["documentId"])

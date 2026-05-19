@@ -1,0 +1,115 @@
+{
+  "VoteHeader": [
+    {
+      "VoteId": 45093,
+      "VoteProtocolNo": 7,
+      "VoteDate": "2026-01-19T20:47:00",
+      "VoteDateStr": "19.1.2026",
+      "VoteTimeStr": "20:47",
+      "VoteType": "הצבעה אלקטרונית",
+      "VoteTypeId": 1,
+      "ItemTitle": "חוק חדלות פירעון ושיקום כלכלי (תיקון מס' 9), התשפ\"ו-2026",
+      "FK_ItemID": 2229878,
+      "FK_AssemblyID": 165,
+      "LU_ItemType": 2,
+      "SessionNumber": 358,
+      "FK_Knesset": 25,
+      "KnessetName": " העשרים-וחמש",
+      "Decision": "לקבל את הצעת החוק בקריאה שלישית",
+      "ChairmanName": "ניסים ואטורי",
+      "DescreetVoteType": null,
+      "IsForAccepted": true,
+      "AcceptedText": "ההצעה התקבלה"
+    }
+  ],
+  "VoteCounters": [
+    {
+      "Title": "בעד",
+      "countOfResult": 12,
+      "rn": 1,
+      "ColorName": "#0A3542"
+    }
+  ],
+  "VoteDetails": [
+    {
+      "MkName": "אזולאי ינון",
+      "FactionName": "התאחדות הספרדים שומרי תורה תנועתו של מרן הרב עובדיה יוסף זצ\"ל",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "אליהו עמיחי",
+      "FactionName": "עוצמה יהודית בראשות איתמר בן גביר",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "בוארון אביחי אברהם",
+      "FactionName": "הליכוד ",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "בליאק ולדימיר",
+      "FactionName": "יש עתיד",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "בן ארי מירב ",
+      "FactionName": "יש עתיד",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "ואטורי ניסים",
+      "FactionName": "הליכוד ",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "כץ אופיר",
+      "FactionName": "הליכוד ",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "לוי מיקי",
+      "FactionName": "יש עתיד",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "קלנר אריאל",
+      "FactionName": "הליכוד ",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "קרויזר יצחק",
+      "FactionName": "עוצמה יהודית בראשות איתמר בן גביר",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "רוטמן שמחה",
+      "FactionName": "הציונות הדתית בראשות בצלאל סמוטריץ'",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    },
+    {
+      "MkName": "שירי נאור",
+      "FactionName": "יש עתיד",
+      "VoteResultId": 7,
+      "Title": "בעד"
+    }
+  ],
+  "DescreetVoteResults": [],
+  "HandsWithoutCountersAccepted": [],
+  "NextAndPrevVotes": [
+    {
+      "NextVote": 45104,
+      "PrevVote": 45092
+    }
+  ]
+}

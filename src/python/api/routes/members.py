@@ -135,11 +135,12 @@ def get_member_details(slug):
             # Protocol stats from utterances (ignores short utterances by design)
             cur.execute("""
                 SELECT
-                    COUNT(DISTINCT protocol_id)                                        AS total_protocols,
-                    COUNT(DISTINCT CASE WHEN source_type='plenum'    THEN protocol_id END) AS plenum_protocols,
-                    COUNT(DISTINCT CASE WHEN source_type='committee' THEN protocol_id END) AS committee_protocols
-                FROM member_utterance
-                WHERE member_slug = %s
+                    COUNT(DISTINCT mu.protocol_id)                                           AS total_protocols,
+                    COUNT(DISTINCT CASE WHEN pr.source_type='plenum'    THEN mu.protocol_id END) AS plenum_protocols,
+                    COUNT(DISTINCT CASE WHEN pr.source_type='committee' THEN mu.protocol_id END) AS committee_protocols
+                FROM member_utterance mu
+                JOIN protocol pr ON pr.document_id = mu.protocol_id
+                WHERE mu.member_slug = %s
             """, (slug,))
             stats_row = cur.fetchone()
             stats = {
@@ -307,10 +308,11 @@ def get_member_utterances_text(slug):
             name = row[0]
 
             cur.execute("""
-                SELECT utterance_text, protocol_date, source_type
-                FROM member_utterance
-                WHERE member_slug = %s
-                ORDER BY protocol_date DESC
+                SELECT mu.utterance_text, pr.protocol_date, pr.source_type
+                FROM member_utterance mu
+                JOIN protocol pr ON pr.document_id = mu.protocol_id
+                WHERE mu.member_slug = %s
+                ORDER BY pr.protocol_date DESC
             """, (slug,))
             utterances = cur.fetchall()
 

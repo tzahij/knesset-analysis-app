@@ -138,11 +138,7 @@ def fact_checks_process_new():
     return jsonify(_ADMIN_STUB), 200
 
 
-# --- Laws: surprising votes endpoint ---
 
-@bp.route("/api/laws/surprising-votes")
-def laws_surprising_votes():
-    return jsonify({"items": [], "summary": {"lawsWithSurprisingVotes": 0}})
 
 
 @bp.route("/api/laws/<bill_id>/surprising-votes/<member_slug>/explanation", methods=["GET", "POST"])

@@ -175,7 +175,7 @@ function renderParagraphs(paragraphs, highlightIndex) {
           id="protocol-paragraph-${index + 1}"
           class="protocol-content__paragraph${index === highlightIndex ? " is-highlighted" : ""}"
           data-paragraph-index="${index}"
-        >${escapeHtml(paragraph)}</p>
+        >${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>
       `,
     )
     .join("");
