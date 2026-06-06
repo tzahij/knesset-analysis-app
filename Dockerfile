@@ -5,7 +5,7 @@ WORKDIR /app
 # Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PORT=3000
+ENV PORT=3001
 
 COPY requirements.txt ./
 
@@ -17,7 +17,7 @@ RUN mkdir -p /app/data
 
 VOLUME ["/app/data"]
 
-EXPOSE 3000
+EXPOSE 3001
 
 # Default command runs the Flask server with gunicorn
-CMD ["gunicorn", "--workers", "4", "--threads", "2", "--bind", "0.0.0.0:3000", "wsgi:app"]
+CMD ["gunicorn", "--workers", "4", "--threads", "2", "--bind", "0.0.0.0:3001", "wsgi:app"]

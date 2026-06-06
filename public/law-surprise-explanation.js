@@ -98,7 +98,6 @@ function renderMeta(record) {
     ["מספר הצעת חוק", law.billId || "לא זמין"],
     ["חבר כנסת", member.name || "לא זמין"],
     ["מפלגה", member.partyName || "לא זמין"],
-    ["סטטוס", status.status || "idle"],
     ["עודכן לאחרונה", formatIsoDate(status.generatedAt || status.finishedAt || status.startedAt)],
   ];
 
@@ -120,86 +119,21 @@ function renderMeta(record) {
   backLinkElement.href = getBackUrl();
 }
 
-function renderStatus(record) {
-  const status = record?.status || {};
 
-  if (status.status === "running") {
-    statusElement.innerHTML = `
-      <div class="surprise-explanation-status-card is-running">
-        <div class="surprise-explanation-status-card__row">
-          <span class="loading-spinner" aria-hidden="true"></span>
-          <div>
-            <p class="eyebrow">Gemini</p>
-            <h2>ההסבר נבנה עכשיו</h2>
-          </div>
-        </div>
-        <p class="muted">${escapeHtml(formatStage(status.currentStage))}</p>
-        <p class="muted">העמוד יתעדכן אוטומטית ברגע שההסבר יהיה מוכן.</p>
-      </div>
-    `;
-    return;
-  }
-
-  if (status.status === "failed") {
-    statusElement.innerHTML = `
-      <div class="surprise-explanation-status-card is-error">
-        <p class="eyebrow">Gemini</p>
-        <h2>יצירת ההסבר נכשלה</h2>
-        <p class="error-message">${escapeHtml(status.error || "Failed to create the explanation.")}</p>
-        <button class="secondary-button" type="button" data-retry="1">נסה שוב</button>
-      </div>
-    `;
-    return;
-  }
-
-  if (status.status === "not_surprising") {
-    statusElement.innerHTML = `
-      <div class="surprise-explanation-status-card">
-        <p class="eyebrow">Status</p>
-        <h2>ההצבעה הזו אינה מסומנת כמפתיעה</h2>
-        <p class="muted">לכן אין עבורה הסבר זמין כרגע.</p>
-      </div>
-    `;
-    return;
-  }
-
-  if (status.status === "completed") {
-    statusElement.innerHTML = `
-      <div class="surprise-explanation-status-card is-success">
-        <p class="eyebrow">Gemini</p>
-        <h2>ההסבר מוכן</h2>
-        <p class="muted">נוצר בתאריך ${escapeHtml(formatIsoDate(status.generatedAt || status.finishedAt))}</p>
-      </div>
-    `;
-    return;
-  }
-
-  statusElement.innerHTML = `
-    <div class="surprise-explanation-status-card">
-      <p class="eyebrow">Gemini</p>
-      <h2>ההסבר עדיין לא נוצר</h2>
-      <p class="muted">לחצו על הכפתור כדי להתחיל לנתח את ההצבעה.</p>
-      <button class="primary-button" type="button" data-retry="1">התחל ניתוח</button>
-    </div>
-  `;
-}
 
 function renderExplanation(record) {
   const explanation = record?.explanation || null;
   const status = record?.status || {};
 
   if (!explanation) {
-    contentElement.innerHTML =
-      status.status === "running"
-        ? ""
-        : `
-          <section class="law-content-card">
-            <div class="law-content-card__header">
-              <p class="eyebrow">Explanation</p>
-              <h2>ההסבר יוצג כאן</h2>
-            </div>
-          </section>
-        `;
+    contentElement.innerHTML = `
+      <section class="law-content-card">
+        <div class="law-content-card__header">
+          <p class="eyebrow">Explanation</p>
+          <h2>ההסבר לא זמין</h2>
+        </div>
+      </section>
+    `;
     return;
   }
 
@@ -260,42 +194,7 @@ function renderExplanation(record) {
   `;
 }
 
-function syncPolling() {
-  const status = state.lastRecord?.status?.status;
 
-  if (status === "running") {
-    if (!state.pollTimer) {
-      state.pollTimer = window.setInterval(() => {
-        void loadRecord();
-      }, 4000);
-    }
-    return;
-  }
-
-  if (state.pollTimer) {
-    window.clearInterval(state.pollTimer);
-    state.pollTimer = null;
-  }
-}
-
-async function startExplanation(force = false) {
-  const { response, payload } = await fetchJson(`${getApiUrl()}${force ? "?force=1" : ""}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(payload.error || "Failed to start the explanation");
-  }
-
-  state.lastRecord = payload;
-  renderMeta(payload);
-  renderStatus(payload);
-  renderExplanation(payload);
-  syncPolling();
-}
 
 async function loadRecord() {
   const { response, payload } = await fetchJson(getApiUrl());
@@ -306,57 +205,10 @@ async function loadRecord() {
 
   state.lastRecord = payload;
   renderMeta(payload);
-  renderStatus(payload);
   renderExplanation(payload);
-  syncPolling();
-
-  const params = new URLSearchParams(window.location.search);
-  const shouldAutostart = params.get("autostart") === "1";
-  const force = params.get("force") === "1";
-  const status = payload?.status?.status || "idle";
-  const isStale = Boolean(payload?.status?.isStale);
-
-  if (
-    shouldAutostart &&
-    !state.autostartAttempted &&
-    (status === "idle" || status === "failed" || isStale)
-  ) {
-    state.autostartAttempted = true;
-    await startExplanation(force || isStale);
-  }
 }
 
-statusElement.addEventListener("click", (event) => {
-  const retryButton = event.target.closest("[data-retry]");
 
-  if (!retryButton) {
-    return;
-  }
-
-  state.autostartAttempted = true;
-  statusElement.innerHTML = `
-    <div class="surprise-explanation-status-card is-running">
-      <div class="surprise-explanation-status-card__row">
-        <span class="loading-spinner" aria-hidden="true"></span>
-        <div>
-          <p class="eyebrow">Gemini</p>
-          <h2>ההסבר נבנה עכשיו</h2>
-        </div>
-      </div>
-    </div>
-  `;
-
-  void startExplanation(true).catch((error) => {
-    renderStatus({
-      ...state.lastRecord,
-      status: {
-        ...(state.lastRecord?.status || {}),
-        status: "failed",
-        error: error.message || String(error),
-      },
-    });
-  });
-});
 
 void loadRecord().catch((error) => {
   titleElement.textContent = "שגיאה בטעינת ההסבר";

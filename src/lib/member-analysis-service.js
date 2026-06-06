@@ -1792,6 +1792,63 @@ class MemberAnalysisService {
     return this.getAdminProfileRebuildStatus();
   }
 
+  normalizeQualitativeGroup(group) {
+    if (!group) return { bullets: [] };
+
+    let bulletsRaw = Array.isArray(group) ? group : (Array.isArray(group.bullets) ? group.bullets : []);
+    let normalizedBullets = [];
+
+    for (const b of bulletsRaw) {
+      if (!b || typeof b !== "object") continue;
+      const point = b.point || b.bullet || "";
+      const evidenceRaw = b.evidence || [];
+      let normalizedEvidence = [];
+
+      if (Array.isArray(evidenceRaw)) {
+        for (const e of evidenceRaw) {
+          if (e && typeof e === "object") {
+            normalizedEvidence.push(e);
+          } else if (typeof e === "string" && e.trim()) {
+            normalizedEvidence.push({ quote: e.trim(), explanation: "", protocolHeading: "" });
+          }
+        }
+      } else if (typeof evidenceRaw === "string" && evidenceRaw.trim()) {
+        normalizedEvidence.push({ quote: evidenceRaw.trim(), explanation: "", protocolHeading: "" });
+      }
+
+      normalizedBullets.push({
+        point,
+        evidence: normalizedEvidence,
+      });
+    }
+
+    return { bullets: normalizedBullets };
+  }
+
+  normalizeQualitativeLayer(layer) {
+    if (!layer || typeof layer !== "object") return {};
+    return {
+      coreStances: this.normalizeQualitativeGroup(layer.coreStances),
+      psychologicalProfile: this.normalizeQualitativeGroup(layer.psychologicalProfile),
+      clashesAndIncongruencies: this.normalizeQualitativeGroup(layer.clashesAndIncongruencies),
+    };
+  }
+
+  normalizeAnalysisOutput(output) {
+    if (!output || typeof output !== "object") return output;
+
+    if (output.analysisSections) {
+      if (output.analysisSections.textBased) {
+        output.analysisSections.textBased = this.normalizeQualitativeLayer(output.analysisSections.textBased);
+      }
+      if (output.analysisSections.betweenTheLines) {
+        output.analysisSections.betweenTheLines = this.normalizeQualitativeLayer(output.analysisSections.betweenTheLines);
+      }
+    }
+
+    return output;
+  }
+
   async executeAnalysisRequest(options) {
     const member = options.member;
     const created = await this.analysisClient.createStructuredResponse({
@@ -1811,7 +1868,8 @@ class MemberAnalysisService {
       maxWaitMs: 30 * 60 * 1000,
     });
 
-    return this.analysisClient.extractStructuredOutput(completed);
+    const output = this.analysisClient.extractStructuredOutput(completed);
+    return this.normalizeAnalysisOutput(output);
   }
 }
 
@@ -1820,3 +1878,4 @@ module.exports = {
   buildAnalysisInstructions,
   MemberAnalysisService,
 };
+

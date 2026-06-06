@@ -1,7 +1,11 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import requests
 import math
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import pytz
 import sys
 
@@ -10,17 +14,22 @@ from utils import (
     normalize_search_text,
     map_with_concurrency,
     download_file,
-    sanitize_filename,
-    ensure_directory,
-    file_exists,
+    sanitize_filename
 )
+
+from base_loader import BaseODataLoader
+
+# Configuration Environment Variables
+SCRAPER_KNESSET_PAGE_SIZE = int(os.environ.get('SCRAPER_KNESSET_PAGE_SIZE', 100))
+SCRAPER_CONCURRENCY = int(os.environ.get('SCRAPER_CONCURRENCY', 6))
+
 
 ODATA_BASE_URL = (
     "http://knesset.gov.il/Odata/ParliamentInfo.svc/KNS_DocumentPlenumSession"
 )
 GROUP_TYPE_ID = 28
-PAGE_SIZE = 100
-CONCURRENCY = 6
+PAGE_SIZE = SCRAPER_KNESSET_PAGE_SIZE
+CONCURRENCY = SCRAPER_CONCURRENCY
 
 
 def normalize_file_url(file_url):
@@ -87,63 +96,28 @@ def normalize_protocol_record(entry):
     }
 
 
-class KnessetLoader:
-    def __init__(self, data_dir, conn):
-        self.data_dir = data_dir
-        self.conn = conn
+class KnessetLoader(BaseODataLoader):
+    def __init__(self, conn):
+        super().__init__(conn)
+        self.window_start = (datetime.now() - relativedelta(years=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        date_str = self.window_start.strftime("%Y-%m-%dT00:00:00")
+        self.window_start_literal = f"datetime'{date_str}'"
 
-    def fetch_json(self, url):
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        return response.json()
-
-    def fetch_text(self, url):
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        return response.text
-
-    def get_latest_update_date(self):
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute("SELECT MAX(last_updated_date) FROM protocol WHERE source_type = 'plenum'")
-                row = cur.fetchone()
-                # PostgreSQL returns datetime if it's a TIMESTAMP column
-                if row and row[0]:
-                    dt = row[0]
-                    if dt.tzinfo is None:
-                        dt = dt.replace(tzinfo=pytz.UTC)
-                    return dt
-        except Exception as e:
-            print(f"Error fetching latest update date from DB: {e}")
-        return None
-
-    def fetch_protocol_count(self, filter_query):
-        count_url = f"{ODATA_BASE_URL}/$count?$filter={filter_query}"
-        raw_count = self.fetch_text(count_url)
-        return int(raw_count)
-
-    def fetch_protocols_metadata(self):
-        latest_date = self.get_latest_update_date()
-
-        filter_query = f"GroupTypeID eq {GROUP_TYPE_ID}"
-        if latest_date:
-            # Format: datetime'YYYY-MM-DDTHH:MM:SS'
-            date_str = latest_date.strftime("%Y-%m-%dT%H:%M:%S")
-            filter_query += f" and LastUpdatedDate gt datetime'{date_str}'"
-            print(f"Fetching updates since {date_str}...")
-        else:
-            print("Fetching all protocols from scratch...")
+    def fetch_metadata(self):
+        filter_query = f"GroupTypeID eq {GROUP_TYPE_ID} and KNS_PlenumSession/StartDate ge {self.window_start_literal}"
+        logger.info(f"Fetching all plenum protocols from scratch (last 1 year)...")
 
         try:
-            total = self.fetch_protocol_count(filter_query)
+            count_url = f"{ODATA_BASE_URL}/$count?$filter={filter_query}"
+            total = self.fetch_protocol_count(count_url)
         except Exception as e:
-            print(f"Error fetching count: {e}. Defaulting to 0 items to fetch.")
+            logger.error(f"Error fetching count: {e}. Defaulting to 0 items to fetch.")
             total = 0
 
-        print(f"Found {total} new or updated items.")
+        logger.info(f"Found {total} plenum items.")
 
         if total == 0:
-            return []  # Nothing to update
+            return []
 
         page_count = math.ceil(total / PAGE_SIZE)
         page_indexes = list(range(page_count))
@@ -158,11 +132,7 @@ class KnessetLoader:
             return [normalize_protocol_record(entry) for entry in items]
 
         pages = map_with_concurrency(page_indexes, CONCURRENCY, worker)
-
-        # Flatten
         new_items = [item for page in pages for item in page]
-
-        # Sort by dateSortValue desc, then documentId desc
         new_items.sort(
             key=lambda x: (x.get("dateSortValue", 0), int(x.get("documentId", 0))),
             reverse=True,
@@ -170,90 +140,7 @@ class KnessetLoader:
 
         return new_items
 
-    def build_download_basename(self, protocol):
-        segments = [protocol.get("dateKey")]
-        if protocol.get("timeKey"):
-            segments.append(protocol.get("timeKey"))
-        if protocol.get("sessionNumber"):
-            segments.append(f"session-{protocol.get('sessionNumber')}")
-        segments.append(f"protocol-{protocol.get('documentId')}")
-        return sanitize_filename("__".join([str(s) for s in segments if s]))
-
-    def get_missing_items(self, items):
-        # We assume `items` are ONLY the new items we just fetched that need downloading
-        raw_dir = os.path.join(self.data_dir, "plenum-raw")
-
-        try:
-            existing_files = set(os.listdir(raw_dir)) if os.path.exists(raw_dir) else set()
-        except OSError:
-            existing_files = set()
-
-        missing = []
-        for item in items:
-            if not item.get("fileUrl"):
-                continue
-            doc_id = str(item["documentId"])
-            if f"{doc_id}.json" not in existing_files:
-                missing.append(item)
-        return missing
-
-    def ensure_protocol_file(self, protocol):
-        raw_dir = os.path.join(self.data_dir, "plenum-raw")
-        ensure_directory(raw_dir)
-
-        doc_id = str(protocol["documentId"])
-        meta_path = os.path.join(raw_dir, f"{doc_id}.json")
-
-        if not protocol.get("fileUrl"):
-            return None
-
-        # Determine temp path to sniff format
-        # We'll use a temporary extension then rename
-        temp_path = os.path.join(raw_dir, f"{doc_id}.tmp")
-        try:
-            format_info = download_file(protocol["fileUrl"], temp_path)
-
-            extension = format_info["extension"]
-            local_file_path = os.path.join(raw_dir, f"{doc_id}{extension}")
-
-            # Rename temp to final
-            if file_exists(local_file_path):
-                os.remove(local_file_path)
-            os.rename(temp_path, local_file_path)
-
-            download_name = f"{self.build_download_basename(protocol)}{extension}"
-
-            meta = {
-                "documentId": doc_id,
-                "originalUrl": protocol["fileUrl"],
-                "localFilePath": local_file_path,
-                "format": format_info["format"],
-                "extension": extension,
-                "contentType": format_info["contentType"],
-                "downloadName": download_name,
-                "savedAt": datetime.now(pytz.UTC).isoformat(),
-            }
-
-            # Instead of write_json, we can just save it or ignore. 
-            # If we don't save a JSON file, the next time get_missing_items runs, it might download again?
-            # Wait, `get_missing_items` checks if `{doc_id}.json` exists to avoid redownloads.
-            # So we DO need to write the small metadata JSON to `raw_dir` to cache the file download locally.
-            import json
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump(meta, f, ensure_ascii=False, indent=2)
-            return meta
-        except Exception as e:
-            if file_exists(temp_path):
-                os.remove(temp_path)
-            print(f"Error downloading protocol {doc_id}: {e}")
-            return None
-
-    def sync(self):
-        items = self.fetch_protocols_metadata()
-        if not items:
-            return []
-            
-        # Save to DB
+    def save_metadata_to_db(self, items):
         try:
             with self.conn.cursor() as cur:
                 for item in items:
@@ -274,30 +161,56 @@ class KnessetLoader:
                             last_updated = None
 
                     cur.execute("""
-                        INSERT INTO protocol (document_id, source_type, knesset_number, protocol_date, session_number, file_type, url, last_updated_date)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (document_id) DO UPDATE SET
-                            last_updated_date = EXCLUDED.last_updated_date,
-                            url = EXCLUDED.url
-                    """, (doc_id, "plenum", item.get("knessetNumber"), p_date, item.get("sessionNumber"), file_type, item.get("fileUrl"), last_updated))
+                        INSERT INTO protocol (document_id, source_type, knesset_number, protocol_date, session_number, url, last_updated_date)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (document_id) DO NOTHING
+                    """, (doc_id, "plenum", item.get("knessetNumber"), p_date, item.get("sessionNumber"), item.get("fileUrl"), last_updated))
             self.conn.commit()
-            print(f"Saved {len(items)} new/updated plenum protocols to database.")
+            logger.info(f"Saved {len(items)} plenum protocols to database.")
         except Exception as e:
-            print(f"Database error while saving plenum protocols: {e}")
-            
-        return items
+            logger.error(f"Database error while saving plenum protocols: {e}")
 
+    def query_missing_files_from_db(self):
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT document_id, url 
+                    FROM protocol 
+                    WHERE source_type = 'plenum' AND url IS NOT NULL
+                      AND NOT EXISTS (SELECT 1 FROM file f WHERE f.entity_type = 'P' AND f.id = protocol.document_id)
+                """)
+                rows = cur.fetchall()
+            return [{"documentId": r[0], "fileUrl": r[1]} for r in rows]
+        except Exception as e:
+            logger.error(f"Error querying missing files: {e}")
+            return []
+
+    def save_file_to_db(self, task, content, extension, local_conn):
+        from src.python.utils.text_extraxtor import extract_text_from_bytes
+        text = extract_text_from_bytes(content, extension) if content else None
+        with local_conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO file (entity_type, id, file_type, file) 
+                VALUES ('P', %s, %s, %s)
+                ON CONFLICT (entity_type, id) DO UPDATE SET file = EXCLUDED.file, file_type = EXCLUDED.file_type
+                """,
+                (str(task["documentId"]), extension.replace('.', ''), content)
+            )
+            cur.execute(
+                "UPDATE protocol SET parsed_text = %s WHERE document_id = %s",
+                (text, str(task["documentId"]))
+            )
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     sys.path.insert(0, project_root)
     from src.python.data.database import get_db_connection
-    data_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
-    )
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
     conn = get_db_connection()
     try:
-        loader = KnessetLoader(data_dir, conn)
-        loader.sync()
+        loader = KnessetLoader(conn)
+        loader.sync_metadata()
+        loader.download_missing_files()
     finally:
         conn.close()

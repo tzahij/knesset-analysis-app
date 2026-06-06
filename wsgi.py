@@ -2,7 +2,7 @@
 Gunicorn WSGI entry point for Linux production.
 
 Usage:
-    gunicorn --workers 4 --threads 2 --bind 0.0.0.0:3000 wsgi:app
+    gunicorn --workers 4 --threads 2 --bind 0.0.0.0:3001 wsgi:app
 """
 import os
 import sys

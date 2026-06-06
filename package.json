@@ -5,10 +5,11 @@
   "private": true,
   "scripts": {
     "start": ".venv\\Scripts\\python.exe src\\python\\server.py",
-    "start:prod": "gunicorn --workers 4 --threads 2 --bind 0.0.0.0:3000 wsgi:app",
+    "start:prod": "gunicorn --workers 4 --threads 2 --bind 0.0.0.0:3001 wsgi:app",
     "batch": ".venv\\Scripts\\python.exe src\\python\\scrapers\\knesset_store_builder.py",
-    "batch:dry": ".venv\\Scripts\\python.exe src\\python\\scrapers\\knesset_store_builder.py --dry-run",
-    "batch:analyze": ".venv\\Scripts\\python.exe src\\python\\scrapers\\knesset_store_builder.py --analyze-only",
+    "batch:scrape": ".venv\\Scripts\\python.exe src\\python\\scrapers\\knesset_scraper.py",
+    "batch:analyze": ".venv\\Scripts\\python.exe src\\python\\scrapers\\knesset_analyzer.py",
+    "batch:dry": ".venv\\Scripts\\python.exe src\\python\\scrapers\\knesset_analyzer.py --dry-run",
     "contacts:build": "node src/scripts/build-member-contact-directory.js",
     "contacts:prune-broken": "node src/scripts/prune-broken-member-contact-links.js",
     "contacts:remove-reported": "node src/scripts/remove-reported-member-contact-links.js",
@@ -19,6 +20,7 @@
     "share:cloudflare:stop": "node src/scripts/stop-cloudflare-tunnel.js"
   },
   "dependencies": {
+    "jsdom": "^29.1.1",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.6.205",

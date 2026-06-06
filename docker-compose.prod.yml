@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: "3000"
+      PORT: "3001"
       TRUST_PROXY: "1"
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
@@ -20,17 +20,22 @@ services:
       AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD:-}
       AUTH_ADMIN_DISPLAY_NAME: ${AUTH_ADMIN_DISPLAY_NAME:-}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-auto}
+      PGHOST: ${PGHOST_DOCKER:-host.docker.internal}
+      PGPORT: ${PGPORT:-5432}
+      PGUSER: ${PGUSER:-postgres}
+      PGPASSWORD: ${PGPASSWORD:-sa}
+      PGDATABASE: ${PGDATABASE:-knesset}
     expose:
-      - "3000"
+      - "3001"
     volumes:
       - ./data:/app/data
     healthcheck:
       test:
         [
           "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3001/api/health')"
         ]
       interval: 30s
       timeout: 10s

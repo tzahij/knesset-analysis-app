@@ -316,12 +316,9 @@ app.use((request, _response, next) => {
 });
 app.use(
   express.static(publicDir, {
-    etag: !isStagingApp,
-    lastModified: !isStagingApp,
+    etag: false,
+    lastModified: false,
     setHeaders(response) {
-      if (!isStagingApp) {
-        return;
-      }
 
       response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       response.setHeader("Pragma", "no-cache");
@@ -700,7 +697,7 @@ app.post(
   },
 );
 
-app.get("/api/protocols/:documentId/download", async (request, response, next) => {
+app.get("/api/protocols/:documentId/fetch", async (request, response, next) => {
   try {
     const file = await protocolStore.getDownloadableFile(request.params.documentId);
 
@@ -715,11 +712,11 @@ app.get("/api/protocols/:documentId/download", async (request, response, next) =
   }
 });
 
-app.get("/api/download-all/status", (_request, response) => {
+app.get("/api/fetch-all/status", (_request, response) => {
   response.json(protocolStore.getBulkStatus());
 });
 
-app.post("/api/download-all", async (_request, response, next) => {
+app.post("/api/fetch-all", async (_request, response, next) => {
   try {
     const status = await protocolStore.startBulkDownload();
     response.status(202).json(status);
@@ -937,7 +934,7 @@ app.get("/api/laws/:billId/content", async (request, response, next) => {
   }
 });
 
-app.get("/api/laws/:billId/download", async (request, response, next) => {
+app.get("/api/laws/:billId/fetch", async (request, response, next) => {
   try {
     const requestedKind = request.query.kind === "word" ? "word" : "pdf";
     const file = await lawStore.getDownloadableFile(request.params.billId, requestedKind);
@@ -968,7 +965,7 @@ app.get("/api/committee-protocols/:documentId/content", async (request, response
   }
 });
 
-app.get("/api/committee-protocols/:documentId/download", async (request, response, next) => {
+app.get("/api/committee-protocols/:documentId/fetch", async (request, response, next) => {
   try {
     const file = await committeeProtocolStore.getDownloadableFile(request.params.documentId);
 
@@ -1367,7 +1364,7 @@ app.post("/api/members/analyses/bulk", requireRole("admin"), async (request, res
   }
 });
 
-app.get("/api/members/:slug/utterance-file/download", requireRole("basic"), async (request, response, next) => {
+app.get("/api/members/:slug/utterance-file/fetch", requireRole("basic"), async (request, response, next) => {
   try {
     const manifest = await memberProtocolService.getMemberUtteranceFileDownload(
       request.params.slug,

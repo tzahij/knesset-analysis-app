@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import re
 import json
@@ -11,6 +14,13 @@ import sys
 
 from psycopg2.extras import Json
 from member_registry import get_member_registry, resolve_member_by_name
+
+# Configuration Environment Variables
+FETCH_TEXT_RETRIES = int(os.environ.get('FETCH_TEXT_RETRIES', 2))
+SCRAPER_MEMBER_REQUEST_TIMEOUT = int(os.environ.get('SCRAPER_MEMBER_REQUEST_TIMEOUT', 15))
+CONCURRENT_MEMBERS_WORKERS = int(os.environ.get('CONCURRENT_MEMBERS_WORKERS', 8))
+CONCURRENT_WIKIDATA_WORKERS = int(os.environ.get('CONCURRENT_WIKIDATA_WORKERS', 4))
+
 
 SOURCE_URL = "https://www.knesset.gov.il/WebSiteApi/knessetapi/MkLobby/GetMkLobbyData?lang=he"
 WIKIDATA_SEARCH_URL = "https://www.wikidata.org/w/api.php?action=wbsearchentities&language=he&format=json&limit=5"
@@ -156,10 +166,10 @@ def build_contacts_from_mk_record(mk_record):
         
     return sort_contacts(contacts)
 
-def fetch_text_with_retries(url, retries=2):
+def fetch_text_with_retries(url, retries=FETCH_TEXT_RETRIES):
     for attempt in range(retries + 1):
         try:
-            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=15)
+            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=SCRAPER_MEMBER_REQUEST_TIMEOUT)
             if resp.status_code == 200:
                 return resp.text
         except:
@@ -177,10 +187,8 @@ def extract_social_links_from_html(html):
     return contacts
 
 class MembersLoader:
-    def __init__(self, data_dir, conn):
-        self.data_dir = data_dir
+    def __init__(self, conn):
         self.conn = conn
-        self.directory_path = os.path.join(data_dir, "member-contact-directory.json")
         
     def resolve_local_member(self, official_name, members_by_route_slug):
         manual = MANUAL_NAME_TO_ROUTE_SLUG.get(official_name)
@@ -190,11 +198,11 @@ class MembersLoader:
 
     def fetch_official_directory(self):
         try:
-            resp = requests.get(SOURCE_URL, headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=30)
+            resp = requests.get(SOURCE_URL, headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=int(os.environ.get('SCRAPER_MEMBER_REQUEST_TIMEOUT', 30)))
             payload = resp.json()
             return payload.get("mks", [])
         except Exception as e:
-            print(f"Error fetching official directory: {e}")
+            logger.error(f"Error fetching official directory: {e}")
             return []
 
     def scrape_zmanknesset(self, members_by_route_slug):
@@ -220,14 +228,14 @@ class MembersLoader:
                 "contacts": socials
             }
             
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENT_MEMBERS_WORKERS) as executor:
             for res in executor.map(fetch_zk, urls):
                 if res: results.append(res)
         return results
 
     def fetch_wikidata_claims(self, entity_id):
         try:
-            resp = requests.get(f"{WIKIDATA_ENTITY_URL_PREFIX}{entity_id}.json", headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=10)
+            resp = requests.get(f"{WIKIDATA_ENTITY_URL_PREFIX}{entity_id}.json", headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=int(os.environ.get('SCRAPER_MEMBER_REQUEST_TIMEOUT', 10)))
             if resp.status_code == 200:
                 payload = resp.json()
                 return payload.get("entities", {}).get(entity_id, {}).get("claims", {})
@@ -237,7 +245,7 @@ class MembersLoader:
 
     def search_wikidata_entities(self, term):
         try:
-            resp = requests.get(f"{WIKIDATA_SEARCH_URL}&search={requests.utils.quote(term)}", headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=10)
+            resp = requests.get(f"{WIKIDATA_SEARCH_URL}&search={requests.utils.quote(term)}", headers={"User-Agent": "Mozilla/5.0 Codex"}, timeout=int(os.environ.get('SCRAPER_MEMBER_REQUEST_TIMEOUT', 10)))
             if resp.status_code == 200:
                 payload = resp.json()
                 return payload.get("search", [])
@@ -279,7 +287,7 @@ class MembersLoader:
         return None
 
     def build_directory(self):
-        print("Starting Members Directory sync...")
+        logger.info("Starting Members Directory sync...")
         registry = get_member_registry().get("members", [])
         members_by_route_slug = {m.get("routeSlug", m.get("slug")): m for m in registry}
         official_mks = self.fetch_official_directory()
@@ -329,7 +337,7 @@ class MembersLoader:
             profile = self.find_wikidata_profile(member)
             return member["slug"], profile
             
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENT_WIKIDATA_WORKERS) as executor:
             for slug, profile in executor.map(process_wikidata, targets):
                 if profile:
                     entry = members[slug]
@@ -343,7 +351,7 @@ class MembersLoader:
         for member in members.values():
             member.pop("aliases", None)
 
-        print(f"Syncing {len(members)} members to PostgreSQL...")
+        logger.info(f"Syncing {len(members)} members to PostgreSQL...")
         try:
             with self.conn.cursor() as cur:
                 # Sync parties first
@@ -376,18 +384,17 @@ class MembersLoader:
                             updated_at = CURRENT_TIMESTAMP
                     """, (slug, m.get("name"), party_id, Json(contacts)))
             self.conn.commit()
-            print("Successfully saved Members Directory to database.")
+            logger.info("Successfully saved Members Directory to database.")
         except Exception as e:
-            print(f"Database error while saving members: {e}")
+            logger.error(f"Database error while saving members: {e}")
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     sys.path.insert(0, project_root)
     from src.python.data.database import get_db_connection
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
     conn = get_db_connection()
     try:
-        loader = MembersLoader(data_dir, conn)
+        loader = MembersLoader(conn)
         loader.build_directory()
     finally:
         conn.close()

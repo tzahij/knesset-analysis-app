@@ -18,6 +18,11 @@ except AttributeError:
 
 from src.python.api import create_app
 
+# Configuration Environment Variables
+PORT = int(os.environ.get('PORT', 3001))
+SERVER_THREADS = int(os.environ.get('SERVER_THREADS', 8))
+
+
 app = create_app()
 
 if __name__ == "__main__":
@@ -28,6 +33,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    port = int(os.environ.get("PORT", 3000))
+    port = PORT
     logging.getLogger("KnessetServer").info(f"Starting on http://0.0.0.0:{port} (Waitress, 8 threads)")
-    serve(app, host="0.0.0.0", port=port, threads=8)
+    serve(app, host="0.0.0.0", port=port, threads=SERVER_THREADS)

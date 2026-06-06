@@ -24,7 +24,7 @@ npm.cmd install
 npm.cmd start
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Then open [http://localhost:3001](http://localhost:3001).
 
 If you only want protocol browsing, downloads, and member quote files, the app can still run without `GEMINI_API_KEY`.
 The key is required only for the bulk political-analysis feature in the `חברי הכנסת` section.
@@ -325,7 +325,7 @@ docker compose up -d --build
 4. Open the server in a browser:
 
 ```text
-http://YOUR_SERVER_IP:3000
+http://YOUR_SERVER_IP:3001
 ```
 
 ### Run it with a real domain and HTTPS
@@ -355,7 +355,7 @@ https://YOUR_DOMAIN
 
 In this setup:
 
-- `knesset-reader` serves the Node app internally on port `3000`
+- `knesset-reader` serves the app internally on port `3001`
 - `caddy` terminates HTTPS and routes public traffic to the app
 - TLS certificates are handled automatically by Caddy for public domains
 - all site data is still persisted in `./data`
@@ -380,7 +380,7 @@ adds the large raw/parsed/download caches when you explicitly want a full cache 
 
 For a proper public website, place the app behind a reverse proxy or a hosting
 setup that gives you HTTPS and a domain name. The app itself is ready to run
-publicly on port `3000`, but TLS/domain setup depends on the server you choose.
+publicly on port `3001`, but TLS/domain setup depends on the server you choose.
 
 ## Notes
 

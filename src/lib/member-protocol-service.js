@@ -1157,7 +1157,7 @@ function createProtocolReference(source, protocol) {
       sourceLabel: "ישיבת ועדה",
       documentId: String(protocol.documentId),
       readerUrl: `/committee-protocol/${encodeURIComponent(protocol.documentId)}`,
-      downloadUrl: `/api/committee-protocols/${encodeURIComponent(protocol.documentId)}/download`,
+      downloadUrl: `/api/committee-protocols/${encodeURIComponent(protocol.documentId)}/fetch`,
       title: protocol.committeeName || protocol.title,
       shortDateLabel: protocol.shortDateLabel,
       longDateLabel: protocol.longDateLabel,
@@ -1182,7 +1182,7 @@ function createProtocolReference(source, protocol) {
     sourceLabel: "ישיבת מליאה",
     documentId: String(protocol.documentId),
     readerUrl: `/protocol/${encodeURIComponent(protocol.documentId)}`,
-    downloadUrl: `/api/protocols/${encodeURIComponent(protocol.documentId)}/download`,
+    downloadUrl: `/api/protocols/${encodeURIComponent(protocol.documentId)}/fetch`,
     title: protocol.title || protocol.shortDateLabel,
     shortDateLabel: protocol.shortDateLabel,
     longDateLabel: protocol.longDateLabel,
@@ -1328,7 +1328,7 @@ class MemberProtocolService {
     const routeSlug = member.id || member.slug;
     const variant = getUtteranceFileVariantMeta(sourceType);
 
-    return `/api/members/${encodeURIComponent(routeSlug)}/utterance-file/download?sourceType=${encodeURIComponent(
+    return `/api/members/${encodeURIComponent(routeSlug)}/utterance-file/fetch?sourceType=${encodeURIComponent(
       variant.key,
     )}`;
   }
@@ -2220,7 +2220,7 @@ class MemberProtocolService {
       current: null,
       error: null,
       downloadName: manifest.downloadName,
-      downloadUrl: `/api/members/${encodeURIComponent(member.id || canonicalSlug)}/utterance-file/download`,
+      downloadUrl: `/api/members/${encodeURIComponent(member.id || canonicalSlug)}/utterance-file/fetch`,
       isPartial: Boolean(manifest.isPartial),
       isStale,
     };
@@ -2543,7 +2543,7 @@ class MemberProtocolService {
       current: null,
       error: null,
       downloadName: manifest.downloadName,
-      downloadUrl: `/api/members/${encodeURIComponent(member.id || slug)}/utterance-file/download`,
+      downloadUrl: `/api/members/${encodeURIComponent(member.id || slug)}/utterance-file/fetch`,
       isPartial: manifest.isPartial,
       isStale: false,
     });

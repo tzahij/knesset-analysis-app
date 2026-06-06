@@ -178,14 +178,8 @@ function syncSurpriseExplanationPolling() {
 
 function renderMetaRows(law, payload) {
   const rows = [
-    ["תאריך פרסום", law.longDateLabel || law.shortDateLabel || "לא זמין"],
+    ["תאריך פרסום", law.publicationDate ? new Intl.DateTimeFormat("he-IL", { dateStyle: "long" }).format(new Date(law.publicationDate)) : "לא זמין"],
     ["מספר הצעת חוק", law.billId],
-    ["מספר חוק", law.lawId || "לא זמין"],
-    ["סטטוס רשמי", law.statusDesc || "התקבלה בקריאה שלישית"],
-    ["סדרת פרסום", law.publicationSeriesDesc || "ספר החוקים"],
-    ["נוסח קריא באתר", payload.hasReadableText ? "זמין" : "לא זמין"],
-    ["קובץ PDF רשמי", payload.availableDownloads?.pdf ? "זמין" : "לא זמין"],
-    ["קובץ Word", payload.availableDownloads?.word ? "זמין" : "לא זמין"],
   ];
 
   metaElement.innerHTML = rows
@@ -208,39 +202,14 @@ function renderSummary(paragraphs) {
         <h2>תיאור החוק</h2>
       </div>
       <div class="law-summary-card__body">
-        ${paragraphs.map((paragraph) => `<p class="formatted-paragraph">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("")}
+        ${paragraphs.length ? paragraphs.map((paragraph) => `<p class="formatted-paragraph">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("") : '<p class="muted">תקציר החוק לא זמין.</p>'}
       </div>
     </section>
   `;
 }
 
 function renderContent(paragraphs, parseError) {
-  if (!paragraphs.length) {
-    contentElement.innerHTML = `
-      <section class="law-content-card">
-        <div class="law-content-card__header">
-          <p class="eyebrow">Readable Text</p>
-          <h2>נוסח קריא</h2>
-        </div>
-        <p class="muted">${
-          parseError
-            ? escapeHtml(parseError)
-            : "לקובץ הזה אין כרגע נוסח Word קריא במטמון המקומי. עדיין אפשר להשתמש בכפתורי ההורדה."
-        }</p>
-      </section>
-    `;
-    return;
-  }
-
-  contentElement.innerHTML = `
-    <section class="law-content-card">
-      <div class="law-content-card__header">
-        <p class="eyebrow">Readable Text</p>
-        <h2>נוסח החוק</h2>
-      </div>
-      ${paragraphs.map((paragraph) => `<p class="formatted-paragraph">${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("")}
-    </section>
-  `;
+  contentElement.innerHTML = "";
 }
 
 function configureButtons(billId, payload) {
@@ -978,7 +947,7 @@ function renderAnalysis(payload) {
     </section>
 
     <section class="law-analysis-axis-grid">
-      ${axes.map((axis) => renderAnalysisAxis(axis, record.axes?.[axis.key])).join("")}
+      ${axes.map((axis) => renderAnalysisAxis(axis, record[axis.key])).join("")}
     </section>
 
     ${renderSurprisingVotesSection(payload)}

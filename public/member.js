@@ -39,22 +39,22 @@ const memberVotesStatusElement = document.getElementById("member-votes-status");
 const memberVotesContentElement = document.getElementById("member-votes-content");
 
 const AXIS_META = {
-  religiousSecular: {
+  religiousVsSecular: {
     title: "דתי מול חילוני",
     lowLabel: "חילוני",
     highLabel: "דתי",
   },
-  socialismCapitalism: {
+  socialismVsCapitalism: {
     title: "סוציאליזם מול קפיטליזם",
     lowLabel: "סוציאליסטי",
     highLabel: "קפיטליסטי",
   },
-  doveHawk: {
+  dovishVsHawkish: {
     title: "יוני מול נצי",
     lowLabel: "יוני",
     highLabel: "נצי",
   },
-  liberalDemocracyAuthoritarianism: {
+  liberalDemocracyVsAuthoritarianism: {
     title: "דמוקרטיה ליברלית מול סמכותנות",
     lowLabel: "דמוקרטיה ליברלית",
     highLabel: "סמכותנות",
@@ -105,7 +105,7 @@ const HIGHLIGHT_SECTION_META = [
 
 const state = {
   activeTab: null,
-  activeAnalysisSourceType: "small",
+  activeAnalysisSourceType: "full",
   pollTimer: null,
   analysisRequestInFlight: false,
   analysisRequestSourceType: null,
@@ -589,8 +589,20 @@ async function readApiJson(response) {
   throw buildFriendlyApiError(response, bodyText);
 }
 
-async function fetchApiJson(url, options) {
-  const response = await fetch(url, options);
+async function fetchApiJson(url, options = {}) {
+  // Add a cache buster query parameter to prevent aggressive browser/CDN caching of API data
+  const separator = url.includes("?") ? "&" : "?";
+  const urlWithCacheBuster = `${url}${separator}t=${Date.now()}`;
+  
+  const response = await fetch(urlWithCacheBuster, {
+    ...options,
+    headers: {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+      ...(options.headers || {})
+    }
+  });
   return readApiJson(response);
 }
 
@@ -642,15 +654,22 @@ function applyRequestedMemberSection(options = {}) {
   const requestedSection = getRequestedMemberSection();
   const shouldScroll = options.scroll !== false;
 
-  if (requestedSection !== "votes") {
-    return;
+  if (["analysis", "highlights", "protocols", "votes"].includes(requestedSection)) {
+    setActiveTab(requestedSection);
+  } else {
+    setActiveTab("analysis");
   }
-
-  setActiveTab("votes");
 
   if (shouldScroll) {
     window.requestAnimationFrame(() => {
-      memberVotesPanelElement?.scrollIntoView({
+      const activePanel = [
+        { id: "analysis", el: memberAnalysisPanelElement },
+        { id: "highlights", el: memberHighlightsPanelElement },
+        { id: "protocols", el: memberProtocolsPanelElement },
+        { id: "votes", el: memberVotesPanelElement },
+      ].find(p => p.id === (["analysis", "highlights", "protocols", "votes"].includes(requestedSection) ? requestedSection : "analysis"))?.el;
+      
+      activePanel?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
@@ -913,64 +932,7 @@ function renderProtocols(payload) {
     .join("");
 }
 
-function renderUtteranceFileStatus(payload) {
-  const utteranceFile = payload?.utteranceFile || null;
-  memberFileStatusElement.className = "updates-status is-neutral";
-  memberFileDownloadLink.hidden = true;
-  memberFileDownloadLink.href = "#";
-  memberFileDownloadLink.removeAttribute("download");
 
-  if (!utteranceFile || utteranceFile.status === "idle") {
-    memberFileStatusElement.innerHTML = `
-      <p><span class="status-chip">הקובץ עדיין לא נוצר</span></p>
-      <p class="muted">כדי ליצור את כל קבצי האמירות, עברו לעמוד חברי הכנסת ולחצו על כפתור היצירה המרכזי.</p>
-    `;
-    return;
-  }
-
-  if (utteranceFile.status === "waiting_for_index" || utteranceFile.status === "running") {
-    memberFileStatusElement.className = "updates-status is-running";
-    memberFileStatusElement.innerHTML = `
-      <p><span class="status-chip">קובץ האמירות נבנה כעת</span></p>
-      <p class="muted">הדף יתעדכן אוטומטית ברגע שהקובץ יהיה מוכן.</p>
-    `;
-    return;
-  }
-
-  if (utteranceFile.status === "failed") {
-    memberFileStatusElement.className = "updates-status is-error";
-    memberFileStatusElement.innerHTML = `
-      <p><span class="status-chip">יצירת קובץ האמירות נכשלה</span></p>
-      <p class="error-message">${escapeHtml(
-        utteranceFile.error || "אירעה שגיאה בזמן יצירת קובץ האמירות.",
-      )}</p>
-    `;
-    return;
-  }
-
-  memberFileStatusElement.className = `updates-status ${
-    utteranceFile.isStale ? "is-warning" : "is-success"
-  }`;
-  memberFileStatusElement.innerHTML = `
-    <p><span class="status-chip">קובץ האמירות מוכן</span></p>
-    <p class="muted">פרוטוקולים שנכללו: ${Number(utteranceFile.sectionCount || 0).toLocaleString(
-      "he-IL",
-    )}</p>
-    <p class="muted">קטעי דיבור שנשמרו: ${Number(utteranceFile.utteranceCount || 0).toLocaleString(
-      "he-IL",
-    )}</p>
-    <p class="muted">נוצר בתאריך: ${escapeHtml(formatIsoDate(utteranceFile.generatedAt))}</p>
-    ${
-      utteranceFile.isStale
-        ? '<p class="error-message">נוספו מאז נתונים חדשים. רענון הקבצים נעשה מעמוד חברי הכנסת.</p>'
-        : ""
-    }
-  `;
-
-  memberFileDownloadLink.hidden = false;
-  memberFileDownloadLink.href = utteranceFile.downloadUrl;
-  memberFileDownloadLink.download = utteranceFile.downloadName || "";
-}
 
 function renderEvidenceList(evidence, options = {}) {
   const compactClass = options.compact ? " analysis-evidence--compact" : "";
@@ -1038,13 +1000,13 @@ function renderOverallProfileCard(overallProfile) {
       <div class="analysis-summary-card__grid">
         <section class="analysis-summary-block analysis-summary-block--blunt">
           <h4>מה רואים כאן כשחותכים דרך הרעש</h4>
-          <p>${escapeHtml(overallProfile.bluntProfile?.paragraph || "")}</p>
-          ${renderEvidenceList(overallProfile.bluntProfile?.evidence, { compact: true })}
+          <p>${escapeHtml(overallProfile.comprehensivePortrait || overallProfile.bluntProfile?.paragraph || "")}</p>
+          ${renderEvidenceList(overallProfile.bluntProfile?.evidence || [], { compact: true })}
         </section>
         <section class="analysis-summary-block analysis-summary-block--historical">
           <h4>איך הוא או היא צפויים להיקרא היסטורית</h4>
-          <p>${escapeHtml(overallProfile.historicalContext?.paragraph || "")}</p>
-          ${renderEvidenceList(overallProfile.historicalContext?.evidence, { compact: true })}
+          <p>${escapeHtml(overallProfile.historicalPerception || overallProfile.historicalContext?.paragraph || "")}</p>
+          ${renderEvidenceList(overallProfile.historicalContext?.evidence || [], { compact: true })}
         </section>
       </div>
     </article>
@@ -1065,9 +1027,9 @@ function renderAnalysisComparisonCard(columnTitle, description, group, themeClas
   `;
 }
 
-function renderAnalysisComparisonRow(sectionMeta, analysisSections) {
-  const textLayer = analysisSections?.textBased?.[sectionMeta.key];
-  const betweenLayer = analysisSections?.betweenTheLines?.[sectionMeta.key];
+function renderAnalysisComparisonRow(sectionMeta, analysis) {
+  const textLayer = analysis?.analysisByExplicitText?.[sectionMeta.key];
+  const betweenLayer = analysis?.analysisBetweenTheLines?.[sectionMeta.key];
 
   return `
     <section class="analysis-row analysis-row--${escapeHtml(sectionMeta.theme)}">
@@ -1089,7 +1051,7 @@ function renderNarrativeComparisonLayout(analysis) {
         <div class="analysis-comparison__heading analysis-comparison__heading--text">על סמך הטקסט</div>
         <div class="analysis-comparison__heading analysis-comparison__heading--between">בין השורות</div>
       </div>
-      ${ANALYSIS_SECTION_META.map((sectionMeta) => renderAnalysisComparisonRow(sectionMeta, analysis.analysisSections)).join("")}
+      ${ANALYSIS_SECTION_META.map((sectionMeta) => renderAnalysisComparisonRow(sectionMeta, analysis)).join("")}
     </section>
   `;
 }
@@ -1406,14 +1368,15 @@ function renderAnalysisGraphV2(analysis, voteProfile) {
 }
 
 function renderAnalysis(payload) {
-  const analysisRecord = payload?.analysis || null;
+  const sourceType = state.activeAnalysisSourceType || "full";
+  const analysisRecord = payload?.analyses?.[sourceType] || payload?.analysis || null;
   const analysisStatus = analysisRecord?.status || null;
   const analysis = analysisRecord?.analysis || null;
   memberAnalysisStatusElement.className = "updates-status is-neutral";
   memberAnalysisContentElement.innerHTML = "";
-  memberAnalysisSummaryElement.textContent = "";
+  if (memberAnalysisSummaryElement) memberAnalysisSummaryElement.textContent = "";
   renderAnalysisGraphV2(null, null);
-  renderSourceDisclaimer(memberHighlightsDisclaimerElement, sourceType);
+  renderSourceDisclaimer(memberAnalysisDisclaimerElement, sourceType);
   renderSourceDisclaimer(memberHighlightsDisclaimerElement, sourceType);
   renderAnalysisAction(analysisStatus);
 
@@ -1473,8 +1436,10 @@ function renderAnalysis(payload) {
     return;
   }
 
-  memberAnalysisSummaryElement.textContent =
-    "פרופיל חד בשלושה מוקדים: דיוקן כולל, השוואה בין המפורש למשתמע, ומיקום כמותי על ארבעה צירים.";
+  if (memberAnalysisSummaryElement) {
+    memberAnalysisSummaryElement.textContent =
+      "פרופיל חד בשלושה מוקדים: דיוקן כולל, השוואה בין המפורש למשתמע, ומיקום כמותי על ארבעה צירים.";
+  }
   renderAnalysisGraphV2(analysis, payload?.voteProfile || null);
   memberAnalysisContentElement.innerHTML = `
     <div class="analysis-layout">
@@ -1671,6 +1636,39 @@ function renderPollingErrorMessage(error) {
   `;
 }
 
+function renderSurprisingVotes(payload) {
+  const votes = payload?.surprisingVotes || [];
+  memberVotesStatusElement.className = "updates-status is-neutral";
+  memberVotesStatusElement.hidden = true;
+  
+  if (votes.length === 0) {
+    memberVotesSummaryElement.textContent = "לא נמצאו הצבעות מפתיעות עבור חבר כנסת זה.";
+    memberVotesContentElement.innerHTML = "";
+    return;
+  }
+
+  memberVotesSummaryElement.textContent = `נמצאו ${votes.length} הצבעות מפתיעות`;
+  
+  let html = `<ul class="protocol-list">`;
+  votes.forEach(vote => {
+    const dateStr = vote.date ? new Date(vote.date).toLocaleDateString("he-IL") : "";
+    html += `
+      <li class="protocol-card">
+        <div class="protocol-card__main">
+          <p class="eyebrow">${escapeHtml(dateStr)}</p>
+          <h3 class="protocol-card__title">
+            <a href="${escapeHtml(vote.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(vote.title)}</a>
+          </h3>
+          <p class="protocol-card__description">${escapeHtml(vote.explanation?.bottomLine || "אין פירוט זמין.")}</p>
+        </div>
+      </li>
+    `;
+  });
+  html += `</ul>`;
+  
+  memberVotesContentElement.innerHTML = html;
+}
+
 async function loadMember(options = {}) {
   const preserveUiOnError = Boolean(options.preserveUiOnError);
   const slug = getMemberSlugFromPath();
@@ -1679,10 +1677,13 @@ async function loadMember(options = {}) {
     const payload = await fetchApiJson(`/api/members/${encodeURIComponent(slug)}`);
 
     renderMemberMeta(payload);
+    renderContactSection(payload);
     renderMemberStatus(payload);
     renderProtocols(payload);
-    renderUtteranceFileStatus(payload);
+    renderUtteranceFileStatuses(payload);
     renderAnalysis(payload);
+    renderHighlights(payload);
+    renderSurprisingVotes(payload);
     updatePolling(payload);
   } catch (error) {
     if (preserveUiOnError) {
@@ -1694,24 +1695,38 @@ async function loadMember(options = {}) {
       renderPollingErrorMessage(error);
       return;
     }
-    memberNameElement.textContent = "שגיאה בטעינת חבר הכנסת";
-    memberPartyElement.textContent = "";
-    memberStatusElement.className = "updates-status is-error";
-    memberStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberFileStatusElement.className = "updates-status is-error";
-    memberFileStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberAnalysisStatusElement.className = "updates-status is-error";
-    memberAnalysisStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberProtocolListElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberResultsSummaryElement.textContent = "שגיאה";
+    if (memberNameElement) memberNameElement.textContent = "שגיאה בטעינת חבר הכנסת";
+    if (memberPartyElement) memberPartyElement.textContent = "";
+    if (memberStatusElement) {
+      memberStatusElement.className = "updates-status is-error";
+      memberStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
+        error.message || String(error),
+      )}</p>`;
+    }
+    if (memberFileFullStatusElement) {
+      memberFileFullStatusElement.className = "updates-status is-error";
+      memberFileFullStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
+        error.message || String(error),
+      )}</p>`;
+    }
+    if (memberFileSmallStatusElement) {
+      memberFileSmallStatusElement.className = "updates-status is-error";
+      memberFileSmallStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
+        error.message || String(error),
+      )}</p>`;
+    }
+    if (memberAnalysisStatusElement) {
+      memberAnalysisStatusElement.className = "updates-status is-error";
+      memberAnalysisStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
+        error.message || String(error),
+      )}</p>`;
+    }
+    if (memberProtocolListElement) {
+      memberProtocolListElement.innerHTML = `<p class="error-message">${escapeHtml(
+        error.message || String(error),
+      )}</p>`;
+    }
+    if (memberResultsSummaryElement) memberResultsSummaryElement.textContent = "שגיאה";
   }
 }
 
@@ -1733,10 +1748,12 @@ async function startMemberAnalysis() {
     state.analysisRequestInFlight = false;
     await loadMember();
   } catch (error) {
-    memberAnalysisStatusElement.className = "updates-status is-error";
-    memberAnalysisStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
+    if (memberAnalysisStatusElement) {
+      memberAnalysisStatusElement.className = "updates-status is-error";
+      memberAnalysisStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
+        error.message || String(error),
+      )}</p>`;
+    }
     state.analysisRequestInFlight = false;
     renderAnalysisAction({ status: "failed", configured: true });
   } finally {
@@ -1803,7 +1820,7 @@ function getAnalysisRecord(payload, sourceType) {
 }
 
 function setActiveAnalysisSourceType(sourceType) {
-  state.activeAnalysisSourceType = sourceType === "small" ? "small" : "full";
+  state.activeAnalysisSourceType = "full";
   const isFull = state.activeAnalysisSourceType === "full";
 
   memberAnalysisSourceFullTabButton.classList.toggle("is-active", isFull);
@@ -1822,11 +1839,14 @@ function setActiveAnalysisSourceType(sourceType) {
 }
 
 function renderSingleUtteranceFileStatus(statusElement, downloadLink, utteranceFile, sourceType) {
+  if (!statusElement) return;
   const sourceMeta = getAnalysisSourceUiMeta(sourceType);
   statusElement.className = "updates-status is-neutral";
-  downloadLink.hidden = true;
-  downloadLink.href = "#";
-  downloadLink.removeAttribute("download");
+  if (downloadLink) {
+    downloadLink.hidden = true;
+    downloadLink.href = "#";
+    downloadLink.removeAttribute("download");
+  }
 
   if (!utteranceFile || utteranceFile.status === "idle") {
     statusElement.innerHTML = `
@@ -1874,9 +1894,11 @@ function renderSingleUtteranceFileStatus(statusElement, downloadLink, utteranceF
     }
   `;
 
-  downloadLink.hidden = false;
-  downloadLink.href = utteranceFile.downloadUrl;
-  downloadLink.download = utteranceFile.downloadName || "";
+  if (downloadLink) {
+    downloadLink.hidden = false;
+    downloadLink.href = utteranceFile.downloadUrl;
+    downloadLink.download = utteranceFile.downloadName || "";
+  }
 }
 
 function renderUtteranceFileStatuses(payload) {
@@ -1899,519 +1921,32 @@ function setBuildButtonState(button, disabled, text) {
   button.textContent = text;
 }
 
-function renderAnalysisAction(analysisStatus) {
-  const sourceMeta = getAnalysisSourceUiMeta(state.activeAnalysisSourceType);
-  const isRunning =
-    analysisStatus?.status === "running" ||
-    (state.analysisRequestInFlight && state.analysisRequestSourceType === state.activeAnalysisSourceType);
-
-  if (!analysisStatus?.configured) {
-    setBuildButtonState(memberAnalysisBuildButton, true, "נדרש GEMINI_API_KEY כדי ליצור ניתוח");
-    setBuildButtonState(memberHighlightsBuildButton, true, "נדרש GEMINI_API_KEY כדי לחלץ ציטוטים");
-    return;
-  }
-
-  if (isRunning) {
-    setBuildButtonState(memberAnalysisBuildButton, true, `מנתח כעת את ${sourceMeta.shortLabel}...`);
-    setBuildButtonState(
-      memberHighlightsBuildButton,
-      true,
-      `מחלץ כעת ציטוטים מתוך ${sourceMeta.shortLabel}...`,
-    );
-    return;
-  }
-
-  if (analysisStatus?.status === "failed") {
-    setBuildButtonState(memberAnalysisBuildButton, false, `נסה שוב לנתח את ${sourceMeta.shortLabel}`);
-    setBuildButtonState(
-      memberHighlightsBuildButton,
-      false,
-      `נסה שוב לחלץ ציטוטים מתוך ${sourceMeta.shortLabel}`,
-    );
-    return;
-  }
-
-  if (analysisStatus?.status === "completed") {
-    setBuildButtonState(
-      memberAnalysisBuildButton,
-      false,
-      analysisStatus.isStale ? `רענן את ${sourceMeta.analysisLabel}` : `נתח מחדש את ${sourceMeta.shortLabel}`,
-    );
-    setBuildButtonState(
-      memberHighlightsBuildButton,
-      false,
-      analysisStatus.isStale
-        ? `רענן את הציטוטים מתוך ${sourceMeta.shortLabel}`
-        : `חלץ מחדש ציטוטים מתוך ${sourceMeta.shortLabel}`,
-    );
-    return;
-  }
-
-  setBuildButtonState(memberAnalysisBuildButton, false, `צור ניתוח מ-${sourceMeta.shortLabel}`);
-  setBuildButtonState(memberHighlightsBuildButton, false, `חלץ ציטוטים מ-${sourceMeta.shortLabel}`);
-}
-
-function renderAnalysis(payload) {
-  const sourceType = state.activeAnalysisSourceType;
-  const sourceMeta = getAnalysisSourceUiMeta(sourceType);
-  const analysisRecord = getAnalysisRecord(payload, sourceType);
-  const analysisStatus = analysisRecord?.status || null;
-  const analysis = analysisRecord?.analysis || null;
-  memberAnalysisStatusElement.className = "updates-status is-neutral";
-  memberAnalysisContentElement.innerHTML = "";
-  memberAnalysisSummaryElement.textContent = sourceMeta.summary;
-  renderSourceDisclaimer(memberAnalysisDisclaimerElement, sourceType);
-  renderAnalysisGraph(null, payload?.voteProfile || null);
-  renderAnalysisAction(analysisStatus);
-
-  if (!analysisStatus || analysisStatus.status === "idle") {
-    memberAnalysisStatusElement.innerHTML = analysisStatus?.configured
-      ? `
-        <p><span class="status-chip">${escapeHtml(sourceMeta.analysisLabel)} עדיין לא נוצר</span></p>
-        <p class="muted">אפשר ליצור מכאן ניתוח עבור ${escapeHtml(sourceMeta.shortLabel)} בלבד. אם הקובץ הדרוש עדיין לא קיים, המערכת תיצור אותו קודם.</p>
-      `
-      : `
-        <p><span class="status-chip">הניתוח עדיין לא זמין</span></p>
-        <p class="muted">כדי להפעיל את הניתוחים צריך להגדיר את משתנה הסביבה <code>GEMINI_API_KEY</code>.</p>
-      `;
-    return;
-  }
-
-  if (analysisStatus.status === "running") {
-    memberAnalysisStatusElement.className = "updates-status is-running";
-    memberAnalysisStatusElement.innerHTML = `
-      <p><span class="status-chip">${escapeHtml(sourceMeta.analysisLabel)} נבנה עכשיו</span></p>
-      <p class="muted">שלב נוכחי: ${escapeHtml(analysisStatus.currentStage || "מעבד את החומר")}</p>
-      <p class="muted">המקטעים שעובדו: ${Number(
-        analysisStatus.processedChunks || 0,
-      ).toLocaleString("he-IL")} מתוך ${Number(analysisStatus.totalChunks || 0).toLocaleString("he-IL")}</p>
-    `;
-    return;
-  }
-
-  if (analysisStatus.status === "failed") {
-    memberAnalysisStatusElement.className = "updates-status is-error";
-    memberAnalysisStatusElement.innerHTML = `
-      <p><span class="status-chip">יצירת ${escapeHtml(sourceMeta.analysisLabel)} נכשלה</span></p>
-      <p class="error-message">${escapeHtml(
-        analysisStatus.error || "אירעה שגיאה בזמן יצירת הניתוח.",
-      )}</p>
-    `;
-    return;
-  }
-
-  memberAnalysisStatusElement.className = `updates-status ${analysisStatus.isStale ? "is-warning" : "is-success"}`;
-  memberAnalysisStatusElement.innerHTML = `
-    <p><span class="status-chip">${escapeHtml(sourceMeta.analysisLabel)} מוכן</span></p>
-    <p class="muted">המודל שבו נוצר: ${escapeHtml(analysisStatus.model || "")}</p>
-    <p class="muted">נוצר בתאריך: ${escapeHtml(formatIsoDate(analysisStatus.generatedAt))}</p>
-    ${
-      analysisStatus.isStale
-        ? `<p class="error-message">נוספו מאז ציטוטים חדשים ל-${escapeHtml(sourceMeta.shortLabel)}. אפשר לרענן את הניתוח מהכפתור בעמוד זה.</p>`
-        : ""
-    }
-  `;
-
-  if (!analysis) {
-    return;
-  }
-
-  renderAnalysisGraph(analysis, payload?.voteProfile || null);
-  memberAnalysisContentElement.innerHTML = `
-    <div class="analysis-layout">
-      ${renderOverallProfileCard(analysis.overallProfile)}
-      ${renderNarrativeComparisonLayout(analysis)}
-      <article class="analysis-quant-shell">
-        <div class="analysis-quant-shell__header">
-          <p class="analysis-pillar__eyebrow">ניתוח כמותי</p>
-          <h3>מיקום על ארבעת הצירים</h3>
-          <p>
-            הציונים כאן מתייחסים ל-${escapeHtml(sourceMeta.shortLabel)}. לכל ציון מצורפים גם נימוקים קצרים וגם ראיות מן הפרוטוקולים.
-          </p>
-        </div>
-        <div class="analysis-quant-grid">
-          ${renderQuantitativeLayer(
-            "על סמך הטקסט",
-            "הציונים כאן נשענים על מה שנאמר במפורש, בלי הרחבה פרשנית.",
-            analysis.quantitativeAnalysis?.textBased,
-            "text",
-          )}
-          ${renderQuantitativeLayer(
-            "בין השורות",
-            "הציונים כאן מבוססים על מה שמשתמע מן הטון, ההדגשים, בחירות הלשון והפערים.",
-            analysis.quantitativeAnalysis?.betweenTheLines,
-            "between",
-          )}
-        </div>
-      </article>
-    </div>
-  `;
-}
-
-function renderVoteLawAxisChips(law) {
-  const isAgainst = law?.voteDirection === "against";
-
-  return `
-    <div class="member-votes-law-card__axes">
-      ${Object.keys(AXIS_META)
-        .map((axisKey) => {
-          const axisMeta = AXIS_META[axisKey];
-          const originalScore = Number(law?.lawAxisScores?.[axisKey] || law?.axisScores?.[axisKey] || 0);
-          const contributionScore = Number(law?.axisScores?.[axisKey] || 0);
-          const contributionLabel = isAgainst ? 'ציון הח"כ מהצבעה נגד' : 'ציון הח"כ מהצבעה בעד';
-
-          return `
-            <div class="member-votes-axis-chip ${isAgainst ? "is-against" : "is-for"}" title="${escapeHtml(
-              axisMeta.title,
-            )}">
-              <p class="member-votes-axis-chip__title">${escapeHtml(axisMeta.title)}</p>
-              <div class="member-votes-axis-chip__score-row">
-                <span class="member-votes-axis-chip__label">ציון החוק</span>
-                <strong class="member-votes-axis-chip__value">${escapeHtml(
-                  formatAxisScore(originalScore),
-                )}/10</strong>
-              </div>
-              <div class="member-votes-axis-chip__score-row member-votes-axis-chip__score-row--member">
-                <span class="member-votes-axis-chip__label">${contributionLabel}</span>
-                <strong class="member-votes-axis-chip__value">${escapeHtml(
-                  formatAxisScore(contributionScore),
-                )}/10</strong>
-              </div>
-            </div>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderVoteLawList(voteProfile) {
-  const laws = Array.isArray(voteProfile?.countedLaws)
-    ? voteProfile.countedLaws
-    : Array.isArray(voteProfile?.supportedLaws)
-      ? voteProfile.supportedLaws
-      : [];
-
-  if (!laws.length) {
-    return `
-      <div class="landing-empty-card">
-        <p class="muted">עדיין לא נמצאו חוקים עם נתוני הצבעה וניתוח צירים שיכולים להרכיב את פרופיל ההצבעות.</p>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="member-votes-law-list">
-      ${laws
-        .map(
-          (law) => `
-            <article class="member-votes-law-card ${law.voteDirection === "against" ? "is-against" : "is-for"}">
-              <div class="member-votes-law-card__header">
-                <div>
-                  <h4><a href="${escapeHtml(law.href || "#")}">${escapeHtml(law.title || "")}</a></h4>
-                  <p class="muted">${escapeHtml(law.longDateLabel || law.shortDateLabel || "")}</p>
-                </div>
-                <div class="status-chip-row member-votes-law-card__meta">
-                  <span class="member-votes-law-card__vote-badge ${law.voteDirection === "against" ? "is-against" : "is-for"}">
-                    ${escapeHtml(`הצביע ${law.voteDirectionLabel || "בעד"}`)}
-                  </span>
-                  ${
-                    law.shortDateLabel
-                      ? `<span class="status-chip">${escapeHtml(law.shortDateLabel)}</span>`
-                      : ""
-                  }
-                </div>
-              </div>
-              <p class="member-votes-law-card__summary">${escapeHtml(law.overallSummary || "")}</p>
-              <p class="member-votes-law-card__vote-note ${law.voteDirection === "against" ? "is-against" : "is-for"}">
-                ${
-                  law.voteDirection === "against"
-                    ? 'הח"כ הצביע נגד החוק, ולכן בכל ציר מוצגים כאן גם ציון החוק המקורי וגם הציון שנכנס לפרופיל ההצבעות שלו בעקבות ההצבעה נגד.'
-                    : 'הח"כ הצביע בעד החוק, ולכן בכל ציר ציון החוק המקורי הוא גם הציון שנכנס לפרופיל ההצבעות שלו.'
-                }
-              </p>
-              ${renderVoteLawAxisChips(law)}
-            </article>
-          `,
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderVoteProfile(payload) {
-  const voteProfile = payload?.voteProfile || null;
-  const missingVoteCoverageCount = Number(voteProfile?.missingVoteCoverageCount || 0);
-  const countedLawCount = Number(voteProfile?.countedLawCount ?? voteProfile?.supportedLawCount ?? 0);
-  const isLowSubstantiation = isLowVoteProfileSubstantiation(voteProfile);
-  const substantiationWarning = getVoteProfileSubstantiationWarning(voteProfile);
-  memberVotesSummaryElement.textContent =
-    "פרופיל זה מבוסס רק על חוקים שעברו בקריאה שלישית, שיש להם גם נתוני הצבעה שמית וגם ניתוח צירים. בהצבעה בעד נספר ציון החוק כפי שהוא, ובהצבעה נגד נספר 11 פחות ציון החוק, חוץ ממקרה שבו ציון החוק הוא 5 ואז הוא נשאר 5. בכל ציר מחושב ממוצע רק מתוך החוקים הרלוונטיים לאותו ציר, ולכן ציוני 5/10 ניטרליים אינם נספרים שם כל עוד קיימים חוקים ברורים יותר על אותו ציר.";
-  memberVotesContentElement.innerHTML = "";
-  memberVotesStatusElement.className = "updates-status is-neutral";
-
-  if (!voteProfile || voteProfile.status === "missing" || !countedLawCount) {
-    memberVotesStatusElement.innerHTML = `
-      <p><span class="status-chip">פרופיל ההצבעות עדיין לא זמין</span></p>
-      <p class="muted">כדי לבנות פרופיל כזה נדרשים חוקים שבהם חבר הכנסת הצביע בעד או נגד, ושלאותם חוקים יש גם מפות הצבעה וגם ניתוח צירים שמור.</p>
-    `;
-    memberVotesContentElement.innerHTML = `
-      <div class="landing-empty-card">
-        <p class="muted">עדיין אין לחבר הכנסת הזה מספיק חוקי הצבעה מנותחים כדי לבנות פרופיל מבוסס הצבעות.</p>
-      </div>
-    `;
-    return;
-  }
-
-  memberVotesStatusElement.className = `updates-status ${isLowSubstantiation ? "is-warning" : "is-success"}`;
-  memberVotesStatusElement.innerHTML = `
-    <p><span class="status-chip ${isLowSubstantiation ? "status-chip--vote-caution" : ""}">${
-      isLowSubstantiation ? "פרופיל ההצבעות עם מעט נתונים" : "פרופיל ההצבעות מוכן"
-    }</span></p>
-    <p class="muted">${escapeHtml(voteProfile.summary || "")}</p>
-    <p class="muted">חוקים שנכללו בפרופיל: ${countedLawCount.toLocaleString("he-IL")}</p>
-    ${substantiationWarning ? `<p class="error-message">${escapeHtml(substantiationWarning)}</p>` : ""}
-    ${
-      missingVoteCoverageCount
-        ? `<p class="error-message">שימו לב: נתוני ההצבעה עדיין חסרים עבור ${missingVoteCoverageCount.toLocaleString(
-            "he-IL",
-          )} חוקים חדשים באתר, ולכן ייתכן שהפרופיל המבוסס על הצבעות עדיין חלקי.</p>`
-        : ""
-    }
-    ${
-      voteProfile.generatedAt
-        ? `<p class="muted">עודכן לאחרונה: ${escapeHtml(formatIsoDate(voteProfile.generatedAt))}</p>`
-        : ""
-    }
-  `;
-
-  memberVotesContentElement.innerHTML = `
-    <div class="analysis-layout">
-      <article class="analysis-quant-shell member-votes-shell">
-        <div class="analysis-quant-shell__header">
-          <p class="analysis-pillar__eyebrow">מבוסס הצבעות</p>
-          <h3>ארבעת הצירים לפי פרופיל ההצבעות</h3>
-          ${renderVoteProfileCautionNote(voteProfile)}
-          <p>כל ציון משקף את ממוצע ציוני החוקים שנכללו בפרופיל ההצבעות. הצבעה בעד נספרת כפי שהיא, והצבעה נגד נספרת כ-11 פחות ציון החוק, חוץ ממקרה שבו ציון החוק הוא 5 ואז הוא נשאר 5, ולכן התוצאה מראה את דפוס ההצבעה בפועל ולא רק את המסרים שמופיעים בפרופיל המילולי.</p>
-        </div>
-        <div class="analysis-axis-card-grid">
-          ${Object.keys(AXIS_META)
-            .map((axisKey) => renderAxisCard(axisKey, voteProfile.axes?.[axisKey]))
-            .join("")}
-        </div>
-      </article>
-
-      <article class="analysis-summary-card member-votes-laws-shell">
-        <div class="analysis-summary-card__header">
-          <p class="analysis-summary-card__eyebrow">חוקים שנכללו בפרופיל</p>
-          <h3>אילו חוקים יצרו את פרופיל ההצבעות הזה</h3>
-          ${renderVoteProfileCautionNote(voteProfile)}
-          <p>הרשימה למטה מציגה את החוקים שנכללו בחישוב, בין אם חבר הכנסת הצביע בעדם ובין אם הצביע נגדם. בכל חוק מוצגים גם ציון החוק המקורי וגם הציון שנכנס בפועל לפרופיל הח"כ לפי אופן ההצבעה שלו.</p>
-        </div>
-        ${renderVoteLawList(voteProfile)}
-      </article>
-    </div>
-  `;
-}
-
-function updatePolling(payload) {
-  const utteranceFiles = payload?.utteranceFiles || {};
-  const analyses = payload?.analyses || {};
-  const isMemberIndexRunning = payload?.status?.status === "running";
-  const isAnyFileBuildRunning = ["full", "small"].some((sourceType) =>
-    ["waiting_for_index", "running"].includes(
-      (utteranceFiles[sourceType] || (sourceType === "full" ? payload?.utteranceFile : null))?.status || "",
-    ),
-  );
-  const isAnyAnalysisRunning = ["full", "small"].some((sourceType) =>
-    ["running"].includes(
-      (analyses[sourceType] || (sourceType === "full" ? payload?.analysis : null))?.status?.status || "",
-    ),
-  );
-
-  if (isMemberIndexRunning || isAnyFileBuildRunning || isAnyAnalysisRunning) {
-    if (!state.pollTimer) {
-      state.pollTimer = window.setInterval(() => {
-        void loadMember({ preserveUiOnError: true });
-      }, 5000);
-    }
-
-    return;
-  }
-
-  if (state.pollTimer) {
-    window.clearInterval(state.pollTimer);
-    state.pollTimer = null;
-  }
-}
-
-function renderPollingErrorMessage(error) {
-  const message = escapeHtml(error?.message || String(error));
-
-  memberStatusElement.className = "updates-status is-warning";
-  memberStatusElement.innerHTML = `
-    <p><span class="status-chip">העדכון האוטומטי נעצר זמנית</span></p>
-    <p class="error-message">${message}</p>
-  `;
-
-  memberFileFullStatusElement.className = "updates-status is-warning";
-  memberFileFullStatusElement.innerHTML = `<p class="error-message">${message}</p>`;
-  memberFileSmallStatusElement.className = "updates-status is-warning";
-  memberFileSmallStatusElement.innerHTML = `<p class="error-message">${message}</p>`;
-
-  memberAnalysisStatusElement.className = "updates-status is-warning";
-  memberAnalysisStatusElement.innerHTML = `
-    <p><span class="status-chip">לא הצלחנו לרענן את נתוני הניתוח</span></p>
-    <p class="error-message">${message}</p>
-  `;
-  memberVotesStatusElement.className = "updates-status is-warning";
-  memberVotesStatusElement.innerHTML = `
-    <p><span class="status-chip">לא הצלחנו לרענן את נתוני ההצבעות</span></p>
-    <p class="error-message">${message}</p>
-  `;
-}
-
-async function loadMember(options = {}) {
-  const preserveUiOnError = Boolean(options.preserveUiOnError);
-  const slug = getMemberSlugFromPath();
-
-  try {
-    const payload = await fetchApiJson(`/api/members/${encodeURIComponent(slug)}`);
-    state.latestPayload = payload;
-
-    renderMemberMeta(payload);
-    renderContactSection(payload);
-    renderMemberStatus(payload);
-    renderProtocols(payload);
-    renderUtteranceFileStatuses(payload);
-    renderAnalysis(payload);
-    renderHighlights(payload);
-    renderVoteProfile(payload);
-    updatePolling(payload);
-  } catch (error) {
-    if (preserveUiOnError) {
-      if (state.pollTimer) {
-        window.clearInterval(state.pollTimer);
-        state.pollTimer = null;
-      }
-
-      renderPollingErrorMessage(error);
-      return;
-    }
-
-    memberNameElement.textContent = "שגיאה בטעינת חבר הכנסת";
-    memberPartyElement.textContent = "";
-    memberStatusElement.className = "updates-status is-error";
-    memberStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberFileFullStatusElement.className = "updates-status is-error";
-    memberFileFullStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberFileSmallStatusElement.className = "updates-status is-error";
-    memberFileSmallStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberAnalysisStatusElement.className = "updates-status is-error";
-    memberAnalysisStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberHighlightsStatusElement.className = "updates-status is-error";
-    memberHighlightsStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberVotesStatusElement.className = "updates-status is-error";
-    memberVotesStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberContactListElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberProtocolListElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberResultsSummaryElement.textContent = "שגיאה";
-  }
-}
-
-async function startMemberAnalysis() {
-  if (state.analysisRequestInFlight) {
-    return;
-  }
-
-  const sourceType = state.activeAnalysisSourceType;
-  const sourceMeta = getAnalysisSourceUiMeta(sourceType);
-  state.analysisRequestInFlight = true;
-  state.analysisRequestSourceType = sourceType;
-  renderAnalysisAction({ status: "running", configured: true });
-  memberAnalysisStatusElement.className = "updates-status is-running";
-  memberAnalysisStatusElement.innerHTML = `
-    <p><span class="status-chip">מתחיל לבנות את ${escapeHtml(sourceMeta.analysisLabel)}</span></p>
-    <p class="muted">אם הקובץ הדרוש עדיין לא קיים, המערכת תיצור אותו קודם.</p>
-  `;
-  memberHighlightsStatusElement.className = "updates-status is-running";
-  memberHighlightsStatusElement.innerHTML = `
-    <p><span class="status-chip">מתחיל לחלץ ציטוטים מתוך ${escapeHtml(sourceMeta.shortLabel)}</span></p>
-    <p class="muted">הציטוטים הנבחרים יופיעו כאן מיד אחרי שהניתוח יסתיים.</p>
-  `;
-
-  try {
-    const slug = getMemberSlugFromPath();
-    await fetchApiJson(
-      `/api/members/${encodeURIComponent(slug)}/analysis?sourceType=${encodeURIComponent(sourceType)}`,
-      {
-        method: "POST",
-      },
-    );
-
-    await loadMember();
-  } catch (error) {
-    memberAnalysisStatusElement.className = "updates-status is-error";
-    memberAnalysisStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    memberHighlightsStatusElement.className = "updates-status is-error";
-    memberHighlightsStatusElement.innerHTML = `<p class="error-message">${escapeHtml(
-      error.message || String(error),
-    )}</p>`;
-    renderAnalysisAction({ status: "failed", configured: true });
-  } finally {
-    state.analysisRequestInFlight = false;
-    state.analysisRequestSourceType = null;
-  }
-}
-
 memberAnalysisTabButton.addEventListener("click", () => {
-  toggleTab("analysis");
+  setActiveTab("analysis");
+  const url = new URL(window.location.href);
+  url.searchParams.set("section", "analysis");
+  window.history.replaceState({}, "", url.toString());
 });
 
 memberHighlightsTabButton.addEventListener("click", () => {
-  toggleTab("highlights");
+  setActiveTab("highlights");
+  const url = new URL(window.location.href);
+  url.searchParams.set("section", "highlights");
+  window.history.replaceState({}, "", url.toString());
 });
 
 memberProtocolsTabButton.addEventListener("click", () => {
-  toggleTab("protocols");
+  setActiveTab("protocols");
+  const url = new URL(window.location.href);
+  url.searchParams.set("section", "protocols");
+  window.history.replaceState({}, "", url.toString());
 });
 
 memberVotesTabButton.addEventListener("click", () => {
-  toggleTab("votes");
-});
-
-memberAnalysisSourceFullTabButton.addEventListener("click", () => {
-  setActiveAnalysisSourceType("full");
-});
-
-memberAnalysisSourceSmallTabButton.addEventListener("click", () => {
-  setActiveAnalysisSourceType("small");
-});
-
-memberHighlightsSourceFullTabButton.addEventListener("click", () => {
-  setActiveAnalysisSourceType("full");
-});
-
-memberHighlightsSourceSmallTabButton.addEventListener("click", () => {
-  setActiveAnalysisSourceType("small");
+  setActiveTab("votes");
+  const url = new URL(window.location.href);
+  url.searchParams.set("section", "votes");
+  window.history.replaceState({}, "", url.toString());
 });
 
 memberAnalysisBuildButton.addEventListener("click", () => {
@@ -2422,27 +1957,12 @@ memberHighlightsBuildButton.addEventListener("click", () => {
   void startMemberAnalysis();
 });
 
-memberContactListElement.addEventListener("click", (event) => {
-  const buttonElement = event.target.closest("[data-contact-report]");
-
-  if (!buttonElement) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  void submitContactReport(buttonElement);
-});
-
-window.addEventListener("hashchange", () => {
-  applyRequestedMemberSection();
-});
-
 setActiveTab(null);
-setActiveAnalysisSourceType("small");
+setActiveAnalysisSourceType("full");
 if (getRequestedMemberSection()) {
   applyRequestedMemberSection({ scroll: false });
 } else {
   setActiveTab("analysis");
 }
-void loadMember();
+
+void loadMember({ preserveUiOnError: true });

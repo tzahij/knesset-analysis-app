@@ -1,36 +1,94 @@
 import os
 import json
 import re
+import time
+import logging
 import requests
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pytz
+from dotenv import load_dotenv
+from google import genai
+
+# Configuration Environment Variables
+GEMINI_MAX_RETRIES = int(os.environ.get('GEMINI_MAX_RETRIES', 6))
+GEMINI_RETRY_INITIAL_DELAY = float(os.environ.get('GEMINI_RETRY_INITIAL_DELAY', 4.0))
+SCRAPER_DOWNLOAD_TIMEOUT = int(os.environ.get('SCRAPER_DOWNLOAD_TIMEOUT', 60))
+DOWNLOAD_MAX_RETRIES = int(os.environ.get('DOWNLOAD_MAX_RETRIES', 3))
+
+
+logger = logging.getLogger("GeminiRetry")
+
+def call_gemini_with_retry(client, model, prompt, config=None, max_retries=GEMINI_MAX_RETRIES, initial_delay=GEMINI_RETRY_INITIAL_DELAY):
+    """
+    Calls the Gemini API using the provided genai.Client with exponential backoff retry.
+    Handles transient errors and 429 (Resource Exhausted) rate limits on the free tier.
+    """
+    delay = initial_delay
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=config,
+            )
+            # Auto-parse JSON if config specifies JSON output
+            if config and getattr(config, 'response_mime_type', None) == "application/json":
+                text = response.text
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError as jde:
+                    # Fallback to try stripping markdown blocks
+                    if "```json" in text:
+                        match = re.search(r'```json(.*?)```', text, re.DOTALL)
+                        if match:
+                            try:
+                                return json.loads(match.group(1).strip())
+                            except json.JSONDecodeError:
+                                pass
+                    raise jde
+            return response.text
+        except Exception as e:
+            err_msg = str(e)
+            logger.warning(f"[Attempt {attempt}/{max_retries}] Gemini API call failed: {err_msg}")
+            
+            if attempt == max_retries:
+                logger.error("Max retries reached. Failing Gemini API call.")
+                raise e
+            
+            if "429" in err_msg or "quota" in err_msg.lower() or "resourceexhausted" in err_msg.lower():
+                logger.error(f"Rate limit hit (429 Resource Exhausted). Stopping execution.")
+                raise SystemExit(f"Stopping execution: Gemini API Rate Limit / Quota Exceeded.\nError: {err_msg}")
+            else:
+                logger.info(f"Retrying in {delay:.1f}s...")
+                
+            time.sleep(delay)
+            delay *= 2.0
+
+
+def initialize_gemini_client(default_model="gemini-2.5-flash", override_model=None):
+    """
+    Resolves project root, loads environment variables from .env and .env.local,
+    verifies GEMINI_API_KEY, and returns an initialized genai.Client and active model_name.
+    """
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    load_dotenv(os.path.join(project_root, ".env"))
+    load_dotenv(os.path.join(project_root, ".env.local"), override=True)
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not found in environment")
+        
+    client = genai.Client(api_key=api_key)
+    
+    # Priority: 1) explicit override, 2) ANALYSIS_MODEL env var, 3) default_model
+    model_name = override_model or os.environ.get("ANALYSIS_MODEL") or default_model
+    return client, model_name
+
+
 
 DATE_TIME_ZONE = pytz.timezone("Asia/Jerusalem")
 
-def ensure_directory(dir_path):
-    os.makedirs(dir_path, exist_ok=True)
-
-def file_exists(file_path):
-    return os.path.exists(file_path)
-
-def read_json(file_path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def write_json(file_path, data):
-    ensure_directory(os.path.dirname(file_path))
-    temp_file_path = f"{file_path}.tmp"
-    with open(temp_file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    
-    try:
-        os.replace(temp_file_path, file_path)
-    except OSError:
-        # Fallback if replace fails (e.g., cross-device link issues or Windows permissions)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        os.rename(temp_file_path, file_path)
 
 def sanitize_filename(value):
     s = str(value)
@@ -140,19 +198,22 @@ def sniff_format(buffer):
         "contentType": "application/msword",
     }
 
-def download_file(url, target_path, timeout=60):
-    response = requests.get(url, timeout=timeout, stream=True)
-    response.raise_for_status()
-    
-    # Read the whole thing to sniff
-    content = response.content
-    format_info = sniff_format(content)
-    
-    # If the target_path doesn't have an extension, we might want to add it
-    # but the caller usually provides the full path with extension based on OData.
-    # Actually, the Node.js code sniffs to determine the CORRECT extension.
-    
-    with open(target_path, "wb") as f:
-        f.write(content)
-        
-    return format_info
+def download_file(url, timeout=SCRAPER_DOWNLOAD_TIMEOUT, max_retries=DOWNLOAD_MAX_RETRIES):
+    import time
+    delay = 2.0
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.get(url, timeout=timeout, stream=True)
+            response.raise_for_status()
+            
+            # Read the whole thing to sniff
+            content = response.content
+            format_info = sniff_format(content)
+            
+            return content, format_info
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as e:
+            if attempt == max_retries:
+                raise e
+            logger.warning(f"Download failed for {url} (attempt {attempt}/{max_retries}): {e}. Retrying in {delay}s...")
+            time.sleep(delay)
+            delay *= 2.0

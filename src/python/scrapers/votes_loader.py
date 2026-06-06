@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import json
 import re
@@ -5,11 +8,26 @@ from datetime import datetime, timedelta
 import requests
 import concurrent.futures
 import sys
+from psycopg2.extras import execute_batch
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from src.python.scrapers.member_registry import resolve_member_by_name
+
+# Configuration Environment Variables
+PYTHON_LAW_MATCH_MAX_DAYS = int(os.environ.get('PYTHON_LAW_MATCH_MAX_DAYS', 90))
+SCRAPER_VOTES_TIMEOUT = int(os.environ.get('SCRAPER_VOTES_TIMEOUT', 30))
+VOTES_SEARCH_WINDOW_DAYS_BEFORE = int(os.environ.get('VOTES_SEARCH_WINDOW_DAYS_BEFORE', 21))
+VOTES_SEARCH_WINDOW_DAYS_AFTER = int(os.environ.get('VOTES_SEARCH_WINDOW_DAYS_AFTER', 7))
+CONCURRENT_VOTES_WORKERS = int(os.environ.get('CONCURRENT_VOTES_WORKERS', 5))
+
 
 VOTES_API_BASE_URL = "https://knesset.gov.il/WebSiteApi/knessetapi/Votes"
 PRINT_API_BASE_URL = "https://knesset.gov.il/WebSiteApi/knessetapi/PrintPdf"
 LAW_VOTE_CACHE_VERSION = 1
-LAW_MATCH_MAX_DAYS = 90
+LAW_MATCH_MAX_DAYS = PYTHON_LAW_MATCH_MAX_DAYS
 
 def normalize_search_text(value):
     val = str(value or "")
@@ -43,26 +61,24 @@ def is_third_reading_acceptance(vote_record):
     return True
 
 class VotesLoader:
-    def __init__(self, data_dir, conn):
-        self.data_dir = data_dir
+    def __init__(self, conn):
         self.conn = conn
-        self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "Mozilla/5.0 Codex", "Content-Type": "application/json;charset=UTF-8"})
+        self.headers = {"User-Agent": "Mozilla/5.0 Codex", "Content-Type": "application/json;charset=UTF-8"}
 
     def fetch_vote_headers(self, search_window):
         body = {"SearchType": 2, "FromDate": search_window["fromDate"], "ToDate": search_window["toDate"]}
         try:
-            resp = self.session.post(f"{VOTES_API_BASE_URL}/GetVotesHeaders", json=body, timeout=30)
+            resp = requests.post(f"{VOTES_API_BASE_URL}/GetVotesHeaders", json=body, headers=self.headers, timeout=SCRAPER_VOTES_TIMEOUT)
             if resp.status_code == 200:
                 payload = resp.json()
                 return payload.get("Table", [])
         except Exception as e:
-            print(f"Error fetching vote headers: {e}")
+            logger.error(f"Error fetching vote headers: {e}")
         return []
 
     def fetch_vote_details(self, vote_id):
         try:
-            resp = self.session.get(f"{VOTES_API_BASE_URL}/GetVoteDetails/{vote_id}", timeout=20)
+            resp = requests.get(f"{VOTES_API_BASE_URL}/GetVoteDetails/{vote_id}", headers=self.headers, timeout=int(os.environ.get('SCRAPER_VOTES_TIMEOUT', 20)))
             if resp.status_code == 200:
                 return resp.json()
         except:
@@ -162,20 +178,23 @@ class VotesLoader:
         }
 
     def sync_votes(self, executor):
-        print("Starting Votes sync...")
+        logger.info("Starting Votes sync...")
         
         try:
             with self.conn.cursor() as cur:
+                cur.execute("SELECT slug FROM member")
+                valid_slugs = {r[0] for r in cur.fetchall()}
+                
                 # Only check laws that haven't been successfully matched or definitively unmatched
                 cur.execute("SELECT bill_id, title, publication_date FROM law WHERE vote_match_status = 'pending'")
                 rows = cur.fetchall()
             laws = [{"billId": str(r[0]), "title": r[1], "publicationDate": str(r[2]) if r[2] else None} for r in rows]
         except Exception as e:
-            print(f"Error loading laws from DB: {e}")
+            logger.error(f"Error loading laws from DB: {e}")
             return
             
         if not laws:
-            print("Empty laws in DB, skipping votes.")
+            logger.info("Empty laws in DB, skipping votes.")
             return
             
         pub_dates = [parse_date_value(l.get("publicationDate")) for l in laws]
@@ -187,8 +206,8 @@ class VotesLoader:
         min_date = min(pub_dates)
         max_date = max(pub_dates)
         search_window = {
-            "fromDate": (min_date - timedelta(days=21)).strftime("%Y-%m-%d"),
-            "toDate": (max_date + timedelta(days=7)).strftime("%Y-%m-%d")
+            "fromDate": (min_date - timedelta(days=VOTES_SEARCH_WINDOW_DAYS_BEFORE)).strftime("%Y-%m-%d"),
+            "toDate": (max_date + timedelta(days=VOTES_SEARCH_WINDOW_DAYS_AFTER)).strftime("%Y-%m-%d")
         }
         
         raw_headers = self.fetch_vote_headers(search_window)
@@ -201,7 +220,7 @@ class VotesLoader:
             
         detail_cache = {}
         
-        print(f"Found {len(laws)} laws needing vote resolution.")
+        logger.info(f"Found {len(laws)} laws needing vote resolution.")
         
         def run_law(law):
             return self.process_law(law, headers_by_title, detail_cache)
@@ -215,77 +234,80 @@ class VotesLoader:
                 if res:
                     results.append(res)
             except Exception as e:
-                print(f"Error processing law for votes: {e}")
+                logger.error(f"Error processing law for votes: {e}")
             
         # Save to DB
+        vote_events_to_insert = []
+        vote_records_to_insert = []
+        laws_to_update = []
+        
+        for res in results:
+            laws_to_update.append((res.get("status", "pending"), res.get("billId")))
+            
+            if res.get("status") != "matched": continue
+            vote = res.get("vote")
+            if not vote: continue
+            
+            vote_id = vote.get("voteId")
+            vote_date = parse_date_value(vote.get("voteDate"))
+            if not vote_date: continue
+            
+            vote_events_to_insert.append((
+                vote_id, str(res["billId"]), vote.get("itemTitle"), vote.get("decision"), vote.get("acceptedText"),
+                vote.get("chairmanName"), vote.get("sessionNumber"), vote.get("isForAccepted"), vote_date
+            ))
+            
+            groups = vote.get("groups", {})
+            for vote_type, mk_list in groups.items():
+                if vote_type not in ["for", "against", "abstained", "present"]: continue
+                for mk in mk_list:
+                    raw_name = mk.get("displayName") or mk.get("rawName")
+                    if not raw_name: continue
+                    
+                    member = resolve_member_by_name(raw_name)
+                    if member:
+                        slug = member.get('routeSlug', member.get('id', member['slug']))
+                        if slug in valid_slugs:
+                            vote_records_to_insert.append((vote_id, slug, vote_type))
+
         try:
             with self.conn.cursor() as cur:
-                for res in results:
-                    if res.get("status") != "matched": continue
-                    vote = res.get("vote")
-                    if not vote: continue
-                    
-                    vote_id = vote.get("voteId")
-                    vote_date = parse_date_value(vote.get("voteDate"))
-                    if not vote_date: continue
-                    
-                    # Insert Vote Event
-                    cur.execute("""
+                if vote_events_to_insert:
+                    execute_batch(cur, """
                         INSERT INTO vote_event (vote_id, bill_id, item_title, decision, accepted_text, chairman_name, session_number, is_for_accepted, vote_date)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (vote_id) DO NOTHING
-                    """, (
-                        vote_id, str(res["billId"]), vote.get("itemTitle"), vote.get("decision"), vote.get("acceptedText"),
-                        vote.get("chairmanName"), vote.get("sessionNumber"), vote.get("isForAccepted"), vote_date
-                    ))
-                    
-                    # Map slugs
-                    def mk_to_slug(name):
-                        return re.sub(r'[^a-z0-9א-ת]+', '-', str(name).strip().lower()).strip('-')
-
-                    groups = vote.get("groups", {})
-                    for vote_type, mk_list in groups.items():
-                        if vote_type not in ["for", "against", "abstained", "present"]: continue
-                        for mk in mk_list:
-                            raw_name = mk.get("displayName") or mk.get("rawName")
-                            if not raw_name: continue
-                            slug = mk_to_slug(raw_name)
-                            
-                            try:
-                                cur.execute("""
-                                    INSERT INTO vote_record (vote_id, member_slug, vote_type)
-                                    VALUES (%s, %s, %s)
-                                    ON CONFLICT (vote_id, member_slug) DO UPDATE SET vote_type = EXCLUDED.vote_type
-                                """, (vote_id, slug, vote_type))
-                            except Exception as e:
-                                self.conn.rollback()
-                                continue
-            self.conn.commit()
-            print("Saved votes to database.")
-            
-            # Now update the status for all processed laws
-            with self.conn.cursor() as cur:
-                for res in results:
-                    cur.execute(
+                    """, vote_events_to_insert)
+                
+                if vote_records_to_insert:
+                    execute_batch(cur, """
+                        INSERT INTO vote_record (vote_id, member_slug, vote_type)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (vote_id, member_slug) DO UPDATE SET vote_type = EXCLUDED.vote_type
+                    """, vote_records_to_insert)
+                
+                if laws_to_update:
+                    execute_batch(cur,
                         "UPDATE law SET vote_match_status = %s WHERE bill_id = %s",
-                        (res.get("status", "pending"), res.get("billId"))
+                        laws_to_update
                     )
+            
             self.conn.commit()
+            logger.info("Saved votes to database.")
             
         except Exception as e:
-            print(f"Database error while saving votes: {e}")
+            logger.error(f"Database error while saving votes: {e}")
 
-        print(f"Finished Votes sync. Matched {len([r for r in results if r.get('status') == 'matched'])} new laws.")
+        logger.info(f"Finished Votes sync. Matched {len([r for r in results if r.get('status') == 'matched'])} new laws.")
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     sys.path.insert(0, project_root)
     from src.python.data.database import get_db_connection
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
     conn = get_db_connection()
     try:
-        loader = VotesLoader(data_dir, conn)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        loader = VotesLoader(conn)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENT_VOTES_WORKERS) as executor:
             loader.sync_votes(executor)
     finally:
         conn.close()

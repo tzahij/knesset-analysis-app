@@ -4,9 +4,9 @@ services:
     container_name: knesset-protocol-reader
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
-      PORT: "3000"
+      PORT: "3001"
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
@@ -20,5 +20,10 @@ services:
       AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD:-}
       AUTH_ADMIN_DISPLAY_NAME: ${AUTH_ADMIN_DISPLAY_NAME:-}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-auto}
+      PGHOST: ${PGHOST_DOCKER:-host.docker.internal}
+      PGPORT: ${PGPORT:-5432}
+      PGUSER: ${PGUSER:-postgres}
+      PGPASSWORD: ${PGPASSWORD:-sa}
+      PGDATABASE: ${PGDATABASE:-knesset}
     volumes:
       - ./data:/app/data

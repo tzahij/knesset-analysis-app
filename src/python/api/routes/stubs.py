@@ -110,8 +110,11 @@ def member_contact_report(slug):
 
 @bp.route("/api/methodology")
 def methodology():
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    since_date = (datetime.now() - relativedelta(years=1)).strftime("%Y-%m-%d")
     return jsonify({
-        "sinceDate": "2022-01-01",
+        "sinceDate": since_date,
         "note": "Methodology endpoint not yet ported to Python.",
     })
 
@@ -141,25 +144,7 @@ def fact_checks_process_new():
 
 
 
-@bp.route("/api/laws/<bill_id>/surprising-votes/<member_slug>/explanation", methods=["GET", "POST"])
-def law_surprising_vote_explanation(bill_id, member_slug):
-    if request_is_post():
-        return jsonify(_ADMIN_STUB), 200
-    from flask import request as req
-    from src.python.data.database import get_db_connection, release_db_connection
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT explanation FROM law_surprise_explanation WHERE bill_id=%s AND member_slug=%s",
-                (bill_id, member_slug)
-            )
-            row = cur.fetchone()
-        if row:
-            return jsonify({"explanation": row[0]})
-        return jsonify({"explanation": None}), 404
-    finally:
-        release_db_connection(conn)
+
 
 
 def request_is_post():

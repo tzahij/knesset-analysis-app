@@ -1,7 +1,9 @@
 import re
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
-MEMBER_PROTOCOL_SINCE_YEAR = 2022
-MEMBER_PROTOCOL_SINCE_DATE = f"{MEMBER_PROTOCOL_SINCE_YEAR}-01-01"
+MEMBER_PROTOCOL_SINCE_YEAR = (datetime.now() - relativedelta(years=1)).year
+MEMBER_PROTOCOL_SINCE_DATE = (datetime.now() - relativedelta(years=1)).strftime("%Y-%m-%d")
 
 PARTY_NAMES = {
     "הליכוד",

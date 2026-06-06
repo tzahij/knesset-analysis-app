@@ -1,19 +1,24 @@
 import logging
+import os
 from flask import Blueprint, jsonify, request, send_file
 from src.python.data.database import get_db_connection, release_db_connection
-from src.python.utils.file_reader import extract_text
+
+
+# Configuration Environment Variables
+PYTHON_API_PROTOCOL_PAGE_SIZE = int(os.environ.get('PYTHON_API_PROTOCOL_PAGE_SIZE', 50))
+
 
 bp = Blueprint("protocols", __name__)
 logger = logging.getLogger(__name__)
 
-PAGE_SIZE = 50
+PAGE_SIZE = PYTHON_API_PROTOCOL_PAGE_SIZE
 
 
 def _protocol_row_to_dict(row):
     keys = [
         "documentId", "sourceType", "knessetNumber", "protocolDate",
         "sessionNumber", "committeeName", "committeeTypeDescription",
-        "fileType", "url", "localFilePath", "status",
+        "fileType", "url", "status",
         "lastUpdatedDate", "fetchedAt", "hasExtractedUtterances",
     ]
     d = dict(zip(keys, row))
@@ -42,7 +47,6 @@ def _protocol_row_to_dict(row):
         if d.get(date_key):
             d[date_key] = d[date_key].isoformat() if hasattr(d[date_key], "isoformat") else str(d[date_key])
             
-    d.pop("localFilePath", None)
     return d
 
 
@@ -61,13 +65,15 @@ def _get_protocols(source_type, year=None):
             total = cur.fetchone()[0]
 
             cur.execute(f"""
-                SELECT document_id, source_type, knesset_number, protocol_date,
-                       session_number, committee_name, committee_type_description,
-                       file_type, url, local_file_path, status,
-                       last_updated_date, fetched_at, has_extracted_utterances
-                FROM protocol {where}
-                ORDER BY protocol_date DESC
-            """, params)
+                SELECT p.document_id, p.source_type, p.knesset_number, p.protocol_date,
+                       p.session_number, p.committee_name, p.committee_type_description,
+                       f.file_type, p.url, p.status,
+                       p.last_updated_date, p.fetched_at, p.has_extracted_utterances
+                FROM protocol p
+                LEFT JOIN file f ON f.id = p.document_id AND f.entity_type = %s
+                {where.replace('protocol_date', 'p.protocol_date').replace('source_type', 'p.source_type')}
+                ORDER BY p.protocol_date DESC
+            """, ['P' if source_type == 'plenum' else 'C'] + params)
             items = [_protocol_row_to_dict(r) for r in cur.fetchall()]
 
             cur.execute(f"""
@@ -87,29 +93,17 @@ def _get_protocol_by_id(document_id, source_type):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT document_id, source_type, knesset_number, protocol_date,
-                       session_number, committee_name, committee_type_description,
-                       file_type, url, local_file_path, status,
-                       last_updated_date, fetched_at, has_extracted_utterances
-                FROM protocol
-                WHERE document_id = %s AND source_type = %s
-            """, (document_id, source_type))
+                SELECT p.document_id, p.source_type, p.knesset_number, p.protocol_date,
+                       p.session_number, p.committee_name, p.committee_type_description,
+                       f.file_type, p.url, p.status,
+                       p.last_updated_date, p.fetched_at, p.has_extracted_utterances,
+                       p.parsed_text
+                FROM protocol p
+                LEFT JOIN file f ON f.id = p.document_id AND f.entity_type = %s
+                WHERE p.document_id = %s AND p.source_type = %s
+            """, ('P' if source_type == 'plenum' else 'C', document_id, source_type))
             row = cur.fetchone()
         return row
-    finally:
-        release_db_connection(conn)
-
-
-def _get_protocol_path(document_id, source_type):
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT local_file_path FROM protocol WHERE document_id = %s AND source_type = %s",
-                (document_id, source_type)
-            )
-            row = cur.fetchone()
-        return row[0] if row else None
     finally:
         release_db_connection(conn)
 
@@ -126,37 +120,72 @@ def _handle_get_protocol(document_id, source_type):
 def _handle_get_protocol_content(document_id, source_type):
     import os
     import re
-    path = _get_protocol_path(document_id, source_type)
-    if not path:
-        return jsonify({"error": "Protocol not found"}), 404
-        
     row = _get_protocol_by_id(document_id, source_type)
     if not row:
         return jsonify({"error": "Protocol not found"}), 404
 
-    text = extract_text(path)
-    if not text:
+    parsed_text = row[13] # parsed_text
+
+    if not parsed_text:
         return jsonify({"error": "Content not available"}), 404
         
-    paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
-    ext = os.path.splitext(path)[1]
+    paragraphs = []
+    if parsed_text:
+        paragraphs = [p.strip() for p in re.split(r'\n{2,}', parsed_text) if p.strip()]
+        
+    protocol_dict = _protocol_row_to_dict(row[:13])
+    file_type = row[7] # file_type
     
     return jsonify({
         "documentId": document_id, 
-        "protocol": _protocol_row_to_dict(row),
+        "protocol": protocol_dict,
         "paragraphs": paragraphs,
-        "extension": ext
+        "extension": file_type
     })
 
 
-def _handle_download_protocol(document_id, source_type):
-    import os
-    path = _get_protocol_path(document_id, source_type)
-    if not path or not os.path.exists(path):
-        return jsonify({"error": "Protocol file not found"}), 404
-    ext = os.path.splitext(path)[1]
-    return send_file(path, as_attachment=True, download_name=f"{document_id}{ext}")
+def _handle_fetch_protocol(document_id, source_type):
+    row = _get_protocol_by_id(document_id, source_type)
+    if not row:
+        return jsonify({"error": "Protocol not found in database"}), 404
+        
+    parsed_text = row[14]
+    if not parsed_text:
+        return jsonify({"error": "Text not available in database"}), 404
+        
+    return jsonify({"text": parsed_text})
 
+
+def _handle_download_protocol(document_id, source_type):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            file_type_val = 'P' if source_type == 'plenum' else 'C'
+            cur.execute("""
+                SELECT f.file, f.file_type, p.url 
+                FROM protocol p 
+                LEFT JOIN file f ON f.id = p.document_id AND f.entity_type = %s 
+                WHERE p.document_id = %s AND p.source_type = %s
+            """, (file_type_val, document_id, source_type))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "Protocol not found"}), 404
+            
+            file_blob, p_file_type, url = row
+            if not file_blob:
+                return jsonify({"error": "File not found on server"}), 404
+                
+            import io
+            return send_file(
+                io.BytesIO(file_blob),
+                as_attachment=(p_file_type and p_file_type.lower() != "pdf"),
+                download_name=f"protocol_{document_id}.{p_file_type or 'pdf'}"
+            )
+    except Exception as e:
+        logger.error(f"Download protocol error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        release_db_connection(conn)
 
 # ------------- Plenum -------------
 
@@ -180,8 +209,13 @@ def get_protocol_content(document_id):
     return _handle_get_protocol_content(document_id, "plenum")
 
 
+@bp.route("/api/protocols/<document_id>/fetch")
+def fetch_protocol(document_id):
+    return _handle_fetch_protocol(document_id, "plenum")
+
+
 @bp.route("/api/protocols/<document_id>/download")
-def download_protocol(document_id):
+def download_plenum_protocol(document_id):
     return _handle_download_protocol(document_id, "plenum")
 
 
@@ -205,6 +239,11 @@ def get_committee_protocol(document_id):
 @bp.route("/api/committee-protocols/<document_id>/content")
 def get_committee_protocol_content(document_id):
     return _handle_get_protocol_content(document_id, "committee")
+
+
+@bp.route("/api/committee-protocols/<document_id>/fetch")
+def fetch_committee_protocol(document_id):
+    return _handle_fetch_protocol(document_id, "committee")
 
 
 @bp.route("/api/committee-protocols/<document_id>/download")

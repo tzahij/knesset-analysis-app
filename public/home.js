@@ -3651,9 +3651,6 @@ function renderSourceSpecificUi() {
 }
 
 function renderLawCard(item) {
-  const downloadMeta = [item.hasOfficialPdf ? "PDF רשמי" : null, item.hasWordDocument ? "Word" : null]
-    .filter(Boolean)
-    .join(" � ");
   const surprisingMembers =
     Array.isArray(item.topSurprisingMembers) && item.topSurprisingMembers.length
       ? item.topSurprisingMembers.map((member) => member.memberName).join(", ")
@@ -3670,7 +3667,6 @@ function renderLawCard(item) {
 
   return `
     <a class="protocol-card law-card" href="${getSourceConfig().readerUrl(item.billId)}">
-      <span class="protocol-card__tag">התקבלה בקריאה שלישית</span>
       <strong class="protocol-card__title">${escapeHtml(item.title)}</strong>
       <span class="protocol-card__date">${escapeHtml(item.shortDateLabel)}</span>
       <span class="protocol-card__meta">
@@ -3679,7 +3675,6 @@ function renderLawCard(item) {
         )}
       </span>
       ${surprisingMeta}
-      <span class="protocol-card__meta">${escapeHtml(downloadMeta || "פרטי קובץ לא זמינים")}</span>
     </a>
   `;
 }

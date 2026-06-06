@@ -34,7 +34,7 @@ async function getTunnelPort() {
     // Fall back to the default if the server info file does not exist yet.
   }
 
-  return 3000;
+  return 3001;
 }
 
 function getBinaryCandidates() {

@@ -1,24 +1,31 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import requests
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import pytz
 import sys
 
 from utils import (
     format_date_parts,
     normalize_search_text,
-    file_exists,
-    read_json,
-    write_json,
     download_file,
-    sanitize_filename,
-    ensure_directory
+    sanitize_filename
 )
+
+from base_loader import BaseODataLoader
+
+# Configuration Environment Variables
+SCRAPER_LAW_PAGE_SIZE = int(os.environ.get('SCRAPER_LAW_PAGE_SIZE', 50))
+SCRAPER_LAW_MAX_PAGES = int(os.environ.get('SCRAPER_LAW_MAX_PAGES', 500))
+
 
 ODATA_BASE_URL = "http://knesset.gov.il/Odata/ParliamentInfo.svc/KNS_Bill"
 FINAL_READING_STATUS_ID = 118
-PAGE_SIZE = 50
-MAX_PAGES = 500
+PAGE_SIZE = SCRAPER_LAW_PAGE_SIZE
+MAX_PAGES = SCRAPER_LAW_MAX_PAGES
 
 def normalize_file_url(file_url):
     url = str(file_url or "")
@@ -197,44 +204,28 @@ def normalize_law_record(entry):
         "searchText": normalize_search_text(" ".join([t for t in search_terms if t]))
     }
 
-def build_query(skip):
-    return f"$filter=StatusID eq {FINAL_READING_STATUS_ID}&$expand=KNS_Status,KNS_DocumentBills&$orderby=PublicationDate desc&$top={PAGE_SIZE}&$skip={skip}&$format=json"
+def build_query(skip, window_start_literal=None):
+    filter_expr = f"StatusID eq {FINAL_READING_STATUS_ID}"
+    if window_start_literal:
+        filter_expr += f" and PublicationDate ge {window_start_literal}"
+    return f"$filter={filter_expr}&$expand=KNS_Status,KNS_DocumentBills&$orderby=PublicationDate desc&$top={PAGE_SIZE}&$skip={skip}&$format=json"
 
-class LawLoader:
-    def __init__(self, data_dir, conn):
-        self.data_dir = data_dir
-        self.conn = conn
-        self.cache_file = os.path.join(data_dir, "laws.json")
+class LawLoader(BaseODataLoader):
+    def __init__(self, conn):
+        super().__init__(conn)
+        self.window_start = (datetime.now() - relativedelta(years=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        date_str = self.window_start.strftime("%Y-%m-%dT00:00:00")
+        self.window_start_literal = f"datetime'{date_str}'"
 
-    def fetch_json(self, url):
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        return response.json()
-
-    def load_existing_cache(self):
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute("SELECT bill_id FROM law")
-                rows = cur.fetchall()
-            return [{"billId": str(r[0])} for r in rows]
-        except Exception as e:
-            print(f"Error loading cache from DB: {e}")
-            return []
-
-    def fetch_recent_passed_laws(self):
-        existing_items = self.load_existing_cache()
-        existing_by_bill_id = {item["billId"]: item for item in existing_items}
-        
+    def fetch_metadata(self):
         all_new_items = []
-        seen_bill_ids = set(existing_by_bill_id.keys())
         
-        print(f"Loaded {len(seen_bill_ids)} existing laws. Fetching updates...")
+        logger.info("Fetching laws updates...")
 
         # We paginate through the descending list. 
-        # Once a full page yields zero NEW items, we assume we've caught up completely.
         for page_index in range(MAX_PAGES):
             skip = page_index * PAGE_SIZE
-            page_url = f"{ODATA_BASE_URL}?{build_query(skip)}"
+            page_url = f"{ODATA_BASE_URL}?{build_query(skip, self.window_start_literal)}"
             
             data = self.fetch_json(page_url)
             page_items_raw = data.get("value", [])
@@ -243,140 +234,27 @@ class LawLoader:
                 break
                 
             page_items = [normalize_law_record(entry) for entry in page_items_raw]
-            new_items_in_page = 0
             
             for item in page_items:
                 if not item or item.get("statusId") != FINAL_READING_STATUS_ID:
                     continue
-                
-                bill_id = item["billId"]
-                if bill_id in seen_bill_ids:
-                    continue
-                
-                seen_bill_ids.add(bill_id)
                 all_new_items.append(item)
-                new_items_in_page += 1
-
-            # If we fetched a page but none of the items were new to us, we've hit the point where
-            # our local cache overlaps with the API data. We can stop.
-            if new_items_in_page == 0 and len(page_items) > 0:
-                print(f"Page {page_index} had 0 new items. Delta sync complete.")
-                break
 
             if len(page_items_raw) < PAGE_SIZE:
                 break
 
         if not all_new_items:
-            print("No new laws found.")
-            return existing_items
+            logger.info("No laws found.")
+            return []
 
-        print(f"Found {len(all_new_items)} new laws.")
+        logger.info(f"Found {len(all_new_items)} laws.")
         
-        for item in all_new_items:
-            existing_by_bill_id[item["billId"]] = item
-            
-        merged_items = list(existing_by_bill_id.values())
-
         # Sort
-        merged_items.sort(key=lambda x: (x.get("dateSortValue", 0), int(x.get("billId", 0))), reverse=True)
+        all_new_items.sort(key=lambda x: (x.get("dateSortValue", 0), int(x.get("billId", 0))), reverse=True)
 
-        return merged_items
+        return all_new_items
 
-    def build_download_basename(self, law, kind):
-        segments = [law.get("dateKey"), law.get("title")]
-        segments.append(f"bill-{law.get('billId')}")
-        return sanitize_filename("__".join([str(s) for s in segments if s]))
-
-    def get_missing_tasks(self, items):
-        raw_dir = os.path.join(self.data_dir, "law-raw")
-        
-        cutoff_ts = (datetime.now().timestamp() - (5 * 365.25 * 24 * 3600)) * 1000
-        
-        if not file_exists(raw_dir):
-            existing_files = set()
-        else:
-            try:
-                existing_files = set(os.listdir(raw_dir))
-            except OSError:
-                existing_files = set()
-                
-        missing_tasks = []
-        for item in items:
-            if item.get("dateSortValue", 0) < cutoff_ts:
-                continue
-                
-            if item.get("hasOfficialPdf"):
-                doc = item.get("officialPdfDocument")
-                if doc and doc.get("fileUrl"):
-                    doc_id = str(doc.get("documentId") or f"{item['billId']}-pdf")
-                    if f"{doc_id}.json" not in existing_files:
-                        missing_tasks.append((item, "pdf"))
-            
-            if item.get("hasWordDocument"):
-                doc = item.get("wordDocument")
-                if doc and doc.get("fileUrl"):
-                    doc_id = str(doc.get("documentId") or f"{item['billId']}-word")
-                    if f"{doc_id}.json" not in existing_files:
-                        missing_tasks.append((item, "word"))
-                        
-        return missing_tasks
-
-    def ensure_law_document_file(self, law, kind):
-        raw_dir = os.path.join(self.data_dir, "law-raw")
-        ensure_directory(raw_dir)
-        
-        doc = law.get("officialPdfDocument") if kind == "pdf" else law.get("wordDocument")
-        if not doc or not doc.get("fileUrl"):
-            return None
-            
-        doc_id = str(doc.get("documentId") or f"{law['billId']}-{kind}")
-        meta_path = os.path.join(raw_dir, f"{doc_id}.json")
-        
-        if file_exists(meta_path):
-            try:
-                meta = read_json(meta_path)
-                if meta.get("localFilePath") and file_exists(meta["localFilePath"]):
-                    return meta
-            except:
-                pass
-
-        temp_path = os.path.join(raw_dir, f"{doc_id}.tmp")
-        try:
-            format_info = download_file(doc["fileUrl"], temp_path)
-            
-            extension = format_info["extension"]
-            local_file_path = os.path.join(raw_dir, f"{doc_id}{extension}")
-            
-            if file_exists(local_file_path):
-                os.remove(local_file_path)
-            os.rename(temp_path, local_file_path)
-            
-            download_name = f"{self.build_download_basename(law, kind)}{extension}"
-            
-            meta = {
-                "documentId": doc_id,
-                "billId": law["billId"],
-                "kind": kind,
-                "originalUrl": doc["fileUrl"],
-                "localFilePath": local_file_path,
-                "format": format_info["format"],
-                "extension": extension,
-                "contentType": format_info["contentType"],
-                "downloadName": download_name,
-                "savedAt": datetime.now(pytz.UTC).isoformat()
-            }
-            
-            write_json(meta_path, meta)
-            return meta
-        except Exception as e:
-            if file_exists(temp_path):
-                os.remove(temp_path)
-            print(f"Error downloading law {kind} for bill {law['billId']}: {e}")
-            return None
-
-    def sync(self):
-        items = self.fetch_recent_passed_laws()
-        
+    def save_metadata_to_db(self, items):
         try:
             with self.conn.cursor() as cur:
                 for law in items:
@@ -389,39 +267,69 @@ class LawLoader:
                     if pub_date and "T" in pub_date:
                         pub_date = datetime.fromisoformat(pub_date.replace("Z", "+00:00")).replace(tzinfo=None)
                         
-                    file_type = ""
-                    url = ""
-                    if law.get("hasOfficialPdf"):
-                        file_type = "pdf"
-                        url = law.get("officialPdfDocument", {}).get("fileUrl", "")
-                    elif law.get("hasWordDocument"):
-                        file_type = "doc"
-                        url = law.get("wordDocument", {}).get("fileUrl", "")
+                    url = law.get("officialPdfDocument", {}).get("fileUrl", "") if law.get("hasOfficialPdf") else law.get("wordDocument", {}).get("fileUrl", "")
                         
                     cur.execute("""
-                        INSERT INTO law (bill_id, title, publication_date, file_type, url, summary_law)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (bill_id) DO UPDATE SET
-                            title = EXCLUDED.title,
-                            publication_date = EXCLUDED.publication_date,
-                            file_type = EXCLUDED.file_type,
-                            url = EXCLUDED.url,
-                            summary_law = EXCLUDED.summary_law
-                    """, (bill_id, law.get("title"), pub_date, file_type, url, law.get("summaryLaw", "")))
+                        INSERT INTO law (bill_id, title, publication_date, url, summary_law)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (bill_id) DO NOTHING
+                    """, (bill_id, law.get("title"), pub_date, url, law.get("summaryLaw", "")))
             self.conn.commit()
-            print(f"Saved {len(items)} laws to database.")
+            logger.info(f"Saved {len(items)} laws to database.")
         except Exception as e:
-            print(f"Database error while saving laws: {e}")
-        return items
+            logger.error(f"Database error while saving laws: {e}")
+
+    def query_missing_files_from_db(self):
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    SELECT bill_id, url 
+                    FROM law 
+                    WHERE url IS NOT NULL 
+                      AND NOT EXISTS (SELECT 1 FROM file f WHERE f.entity_type = 'L' AND f.id = law.bill_id)
+                """)
+                rows = cur.fetchall()
+            return [{
+                "billId": r[0],
+                "fileUrl": r[1],
+                "documentId": f"{r[0]}"
+            } for r in rows]
+        except Exception as e:
+            logger.error(f"Error querying missing law files: {e}")
+            return []
+
+    def build_download_basename(self, law, kind):
+        segments = [law.get("dateKey"), law.get("title")]
+        segments.append(f"bill-{law.get('billId')}")
+        return sanitize_filename("__".join([str(s) for s in segments if s]))
+
+    def save_file_to_db(self, task, content, extension, local_conn):
+        from src.python.utils.text_extraxtor import extract_text_from_bytes
+        text = extract_text_from_bytes(content, extension) if content else None
+        with local_conn.cursor() as cur:
+            # Save the file blob
+            cur.execute(
+                """
+                INSERT INTO file (entity_type, id, file_type, file) 
+                VALUES ('L', %s, %s, %s)
+                ON CONFLICT (entity_type, id) DO UPDATE SET file = EXCLUDED.file, file_type = EXCLUDED.file_type
+                """,
+                (str(task["billId"]), extension.replace('.', ''), content)
+            )
+            # Update parsed text
+            cur.execute(
+                "UPDATE law SET parsed_text = %s WHERE bill_id = %s",
+                (text, str(task["billId"]))
+            )
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     sys.path.insert(0, project_root)
     from src.python.data.database import get_db_connection
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
     conn = get_db_connection()
     try:
-        loader = LawLoader(data_dir, conn)
-        loader.sync()
+        loader = LawLoader(conn)
+        loader.sync_metadata()
+        loader.download_missing_files()
     finally:
         conn.close()

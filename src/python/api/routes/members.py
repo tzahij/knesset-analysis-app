@@ -1,37 +1,43 @@
 import re
 import logging
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from flask import Blueprint, jsonify, request
 from src.python.data.database import get_db_connection, release_db_connection
 
 bp = Blueprint("members", __name__)
 logger = logging.getLogger(__name__)
 
-MEMBER_PROTOCOL_SINCE_DATE = "2022-01-01"
+MEMBER_PROTOCOL_SINCE_DATE = (datetime.now() - relativedelta(years=1)).strftime("%Y-%m-%d")
 
 
 def _flatten_contacts(contacts_json):
-    """Convert raw contacts JSONB {platform: [{href, value, ...}]} into a flat list."""
-    if not isinstance(contacts_json, dict):
+    """Convert raw contacts JSONB array into a flat list."""
+    if contacts_json is None:
         return []
+        
+    if not isinstance(contacts_json, list):
+        raise TypeError(f"Expected list for contacts_json, got {type(contacts_json).__name__}")
+        
     result = []
     uid = 0
-    for platform, items in contacts_json.items():
-        if not isinstance(items, list):
+    
+    for item in contacts_json:
+        if not isinstance(item, dict):
+            raise TypeError(f"Expected dict for contact item in list, got {type(item).__name__}")
+        href = item.get("href", "") or ""
+        if not href:
             continue
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            href = item.get("href", "") or ""
-            if not href:
-                continue
-            uid += 1
-            result.append({
-                "id": f"{platform}-{uid}",
-                "platform": platform,
-                "href": href,
-                "value": item.get("value", "") or item.get("label", "") or "",
-                "label": item.get("label", "") or "",
-            })
+        platform = item.get("platform", "unknown")
+        uid += 1
+        result.append({
+            "id": item.get("id") or f"{platform}-{uid}",
+            "platform": platform,
+            "href": href,
+            "value": item.get("value", "") or item.get("label", "") or "",
+            "label": item.get("label", "") or "",
+        })
+        
     return result
 
 
@@ -63,6 +69,16 @@ def get_members():
             """)
             rows = cur.fetchall()
 
+            cur.execute("SELECT COUNT(*) FROM protocol")
+            total_protocols = cur.fetchone()[0] or 0
+
+            cur.execute("SELECT COUNT(DISTINCT protocol_id) FROM member_utterance")
+            matched_protocols = cur.fetchone()[0] or 0
+
+            cur.execute("SELECT MAX(created_at) FROM member_utterance")
+            last_indexed = cur.fetchone()[0]
+            last_indexed_at = last_indexed.isoformat() if last_indexed else None
+
         parties_map = {}
         total_members = 0
 
@@ -91,8 +107,13 @@ def get_members():
             "sinceDate": MEMBER_PROTOCOL_SINCE_DATE,
             "memberCount": total_members,
             "parties": list(parties_map.values()),
-            # Status stub — real indexing is done by the batch pipeline
-            "status": {"status": "completed", "processedProtocols": 0, "totalProtocols": 0, "matchedProtocols": 0, "lastIndexedAt": None},
+            "status": {
+                "status": "completed", 
+                "processedProtocols": matched_protocols, 
+                "totalProtocols": total_protocols, 
+                "matchedProtocols": matched_protocols, 
+                "lastIndexedAt": last_indexed_at
+            },
             "utteranceFilesBulkStatus": {"status": "idle"},
             "analysisBulkStatus": {"status": "idle", "configured": False},
         })
@@ -110,7 +131,7 @@ def get_member_details(slug):
         with conn.cursor() as cur:
             # Member core info
             cur.execute("""
-                SELECT m.slug, m.name, p.name, m.contacts
+                SELECT  m.name, p.name, m.contacts
                 FROM member m
                 LEFT JOIN party p ON m.party_id = p.id
                 WHERE m.slug = %s
@@ -119,7 +140,7 @@ def get_member_details(slug):
             if not row:
                 return jsonify({"error": "Member not found"}), 404
 
-            m_slug, m_name, party_name, contacts = row
+            m_name, party_name, contacts = row
 
             # Analysis (from separate table)
             cur.execute("""
@@ -148,6 +169,11 @@ def get_member_details(slug):
                 "plenumProtocols": stats_row[1] or 0,
                 "committeeProtocols": stats_row[2] or 0,
             }
+
+            # Get last indexed at for this member
+            cur.execute("SELECT MAX(created_at) FROM member_utterance WHERE member_slug = %s", (slug,))
+            last_indexed = cur.fetchone()[0]
+            last_indexed_at = last_indexed.isoformat() if last_indexed else None
 
             # Most recent protocols this member appeared in
             cur.execute("""
@@ -220,12 +246,31 @@ def get_member_details(slug):
                 "analysis": None,
             }
 
+        # Surprising votes for this member
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT l.bill_id, l.title, l.url, lse.explanation, l.publication_date
+                FROM law_surprise_explanation lse
+                JOIN law l ON lse.bill_id = l.bill_id
+                WHERE lse.member_slug = %s
+                ORDER BY l.publication_date DESC
+            """, (slug,))
+            surprising_votes = []
+            for (bill_id, title, url, explanation, pub_date) in cur.fetchall():
+                surprising_votes.append({
+                    "billId": bill_id,
+                    "title": title,
+                    "url": url,
+                    "explanation": explanation,
+                    "date": pub_date.isoformat() if pub_date else None,
+                })
+
         return jsonify({
             "sinceDate": MEMBER_PROTOCOL_SINCE_DATE,
             "isPartial": False,
             "member": {
-                "slug": m_slug,
-                "routeSlug": m_slug,
+                "slug": slug,
+                "routeSlug": slug,
                 "name": m_name,
                 "partyName": party_name,
                 "partySlug": _party_slug(party_name),
@@ -256,8 +301,9 @@ def get_member_details(slug):
                 "processedProtocols": stats["totalProtocols"],
                 "totalProtocols": stats["totalProtocols"],
                 "matchedProtocols": stats["totalProtocols"],
-                "lastIndexedAt": None,
+                "lastIndexedAt": last_indexed_at,
             },
+            "surprisingVotes": surprising_votes,
         })
     except Exception as e:
         logger.error(f"GET /api/members/{slug} error: {e}")

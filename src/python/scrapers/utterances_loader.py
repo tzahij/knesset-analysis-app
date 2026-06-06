@@ -4,6 +4,7 @@ import logging
 import docx
 import re
 import datetime
+from psycopg2.extras import execute_batch
 
 logger = logging.getLogger("UtteranceLoader")
 
@@ -19,32 +20,43 @@ except AttributeError:
 
 from src.python.scrapers.member_registry import resolve_member_by_name
 
-MIN_MEMBER_UTTERANCE_WORDS = 50
+# Configuration Environment Variables
+MIN_MEMBER_UTTERANCE_WORDS = int(os.environ.get('MIN_MEMBER_UTTERANCE_WORDS', 50))
+
+
+MIN_MEMBER_UTTERANCE_WORDS = MIN_MEMBER_UTTERANCE_WORDS
 
 class UtteranceLoader:
-    def __init__(self, data_dir, conn):
-        self.data_dir = data_dir
+    def __init__(self, conn):
         self.conn = conn
         self.regex = re.compile(r'^<<\s*([^>]+?)\s*>>\s*(.+?)\s*:\s*<<\s*([^>]+?)\s*>>$')
 
-    def get_docx_path(self, document_id, source_type):
-        """Construct the likely path to the docx file."""
-        return os.path.join(self.data_dir, f"{source_type}-raw", f"{document_id}.docx")
-
     def process_document(self, document_id, source_type, protocol_date):
-        docx_path = self.get_docx_path(document_id, source_type)
-        if not os.path.exists(docx_path):
-            return 0
-
+        import io
         try:
-            doc = docx.Document(docx_path)
+            with self.conn.cursor() as cur:
+                entity_type = 'P' if source_type == 'plenum' else 'C'
+                cur.execute("SELECT file, file_type FROM file WHERE id = %s AND entity_type = %s", (document_id, entity_type))
+                row = cur.fetchone()
+                
+            if not row or not row[0]:
+                return 0
+                
+            file_blob = row[0]
+            file_type = row[1]
+            
+            if file_type not in ('doc', 'docx'):
+                return 0
+                
+            doc = docx.Document(io.BytesIO(file_blob))
         except Exception as e:
-            logger.warning(f"Could not open docx {docx_path}: {e}")
+            logger.warning(f"Could not read docx for {document_id}: {e}")
             return 0
 
         current_speaker_name = None
         current_paragraphs = []
         utterances_added = 0
+        current_batch = []
 
         def save_current_utterance():
             nonlocal utterances_added
@@ -59,19 +71,10 @@ class UtteranceLoader:
                 if member:
                     db_slug = member.get('routeSlug', member.get('id', member['slug']))
                     try:
-                        with self.conn.cursor() as cur:
-                            cur.execute('''
-                                INSERT INTO member_utterance (
-                                    member_slug, protocol_id, utterance_text, word_count
-                                ) VALUES (%s, %s, %s, %s)
-                            ''', (
-                                db_slug, document_id, text, word_count
-                            ))
-                        self.conn.commit()
                         utterances_added += 1
+                        current_batch.append((db_slug, document_id, text, word_count))
                     except Exception as e:
-                        logger.error(f"Failed to insert utterance for {db_slug}: {e}")
-                        self.conn.rollback()
+                        logger.error(f"Failed to prepare utterance for {db_slug}: {e}")
 
         for para in doc.paragraphs:
             text = para.text.strip()
@@ -93,7 +96,7 @@ class UtteranceLoader:
         # Save the very last speaker block
         save_current_utterance()
         
-        return utterances_added
+        return current_batch
 
     def sync(self):
         logger.info("Starting Utterances Extraction Sync...")
@@ -120,36 +123,45 @@ class UtteranceLoader:
         total_utterances = 0
 
         for doc_id, source_type, protocol_date in pending_protocols:
-            # We only process if the docx actually exists
-            docx_path = self.get_docx_path(doc_id, source_type)
-            if not os.path.exists(docx_path):
-                continue
-                
             utterances = self.process_document(doc_id, source_type, protocol_date)
-            total_utterances += utterances
+            
+            if utterances == 0: # 0 indicates parsing failed or missing file
+                continue
             
             try:
                 with self.conn.cursor() as cur:
+                    # Clean up any partial inserts from previous crashes for this protocol
+                    cur.execute("DELETE FROM member_utterance WHERE protocol_id = %s", (doc_id,))
+                    
+                    if utterances:
+                        execute_batch(cur, '''
+                            INSERT INTO member_utterance (
+                                member_slug, protocol_id, utterance_text, word_count
+                            ) VALUES (%s, %s, %s, %s)
+                        ''', utterances)
+                        total_utterances += len(utterances)
+                    
                     cur.execute('''
                         UPDATE protocol SET has_extracted_utterances = TRUE 
                         WHERE document_id = %s
                     ''', (doc_id,))
+                
+                # Commit all utterances and the protocol status update in ONE atomic transaction
                 self.conn.commit()
                 processed_count += 1
             except Exception as e:
-                logger.error(f"Failed to update protocol status for {doc_id}: {e}")
+                logger.error(f"Transaction failed for protocol {doc_id}: {e}")
                 self.conn.rollback()
 
         logger.info(f"Extracted {total_utterances} utterances from {processed_count} documents.")
 
 if __name__ == "__main__":
     from src.python.data.database import get_db_connection
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     
     conn = get_db_connection()
     try:
-        loader = UtteranceLoader(data_dir, conn)
+        loader = UtteranceLoader(conn)
         loader.sync()
     finally:
         conn.close()

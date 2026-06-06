@@ -4,14 +4,29 @@ import json
 import time
 import logging
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 from psycopg2.extras import Json
 from google import genai
 from google.genai import types
+from pydantic import BaseModel, Field
+import concurrent.futures
+from src.python.scrapers.utils import call_gemini_with_retry, initialize_gemini_client
 
-logger = logging.getLogger("MemberProcessor")
+# Configuration Environment Variables
+MEMBER_ANALYSIS_MAX_UTTERANCES = int(os.environ.get('MEMBER_ANALYSIS_MAX_UTTERANCES', 100))
+MEMBER_ANALYSIS_MIN_WORDS = int(os.environ.get('MEMBER_ANALYSIS_MIN_WORDS', 50))
+MEMBER_ANALYSIS_DECAY_RATE = float(os.environ.get('MEMBER_ANALYSIS_DECAY_RATE', 0.20))
+MEMBER_ANALYSIS_MIN_DAYS = int(os.environ.get('MEMBER_ANALYSIS_MIN_DAYS', 30))
+MEMBER_ANALYSIS_MIN_NEW_UTTERANCES = int(os.environ.get('MEMBER_ANALYSIS_MIN_NEW_UTTERANCES', 10))
+RATE_LIMIT_SLEEP_SECONDS = int(os.environ.get('RATE_LIMIT_SLEEP_SECONDS', 4))
+MAX_MEMBER_CONTEXT_CHARS = int(os.environ.get('MAX_MEMBER_CONTEXT_CHARS', 200000))
+GEMINI_RETRY_INITIAL_DELAY = float(os.environ.get('GEMINI_RETRY_INITIAL_DELAY', 4.0))
+CONCURRENT_ANALYSIS_WORKERS = int(os.environ.get('CONCURRENT_ANALYSIS_WORKERS', 5))
 
-MEMBER_PROTOCOL_SINCE_DATE = "2022-01-01"
+logger = logging.getLogger("MemberAnalyser")
+
+MEMBER_PROTOCOL_SINCE_DATE = (datetime.now() - relativedelta(years=1)).strftime("%Y-%m-%d")
 
 AXIS_LABELS = {
     "religiousSecular": "דתי מול חילוני",
@@ -55,8 +70,61 @@ def build_analysis_instructions(member_name, party_name):
         "בציר סוציאליזם מול קפיטליזם: 1 = סוציאליסטי מאוד, 10 = קפיטליסטי מאוד.",
         "בציר יוני מול נצי: 1 = יוני מאוד, 10 = נצי מאוד.",
         "בציר דמוקרטיה ליברלית מול סמכותנות: 1 = דמוקרטיה ליברלית מאוד, 10 = סמכותני מאוד.",
+        "הקפד להשתמש במירכאות כפולות תקינות (escaped quotes) בתוך טקסטים.",
         "החזר JSON תקף בלבד.",
     ])
+
+# ---------------------------------------------------------------------------
+# Structured Output Schemas
+# ---------------------------------------------------------------------------
+
+class HighlightedQuoteItem(BaseModel):
+    quote: str
+    protocolHeading: str
+    explanation: str
+
+class HighlightedQuotes(BaseModel):
+    innermostEmotions: list[HighlightedQuoteItem]
+    benevolentTowardOthers: list[HighlightedQuoteItem]
+    surprisingInnerWorldOrHistory: list[HighlightedQuoteItem]
+
+class QualitativeInsightItem(BaseModel):
+    point: str
+    evidence: list[HighlightedQuoteItem]
+
+class QualitativeInsightGroup(BaseModel):
+    bullets: list[QualitativeInsightItem]
+
+class QualitativeLayer(BaseModel):
+    coreStances: QualitativeInsightGroup
+    psychologicalProfile: QualitativeInsightGroup
+    clashesAndIncongruencies: QualitativeInsightGroup
+
+class QuantitativeAxis(BaseModel):
+    score: int
+    explanationBullets: list[str]
+    evidence: list[HighlightedQuoteItem]
+
+class QuantitativeLayer(BaseModel):
+    dovishVsHawkish: QuantitativeAxis
+    religiousVsSecular: QuantitativeAxis
+    socialismVsCapitalism: QuantitativeAxis
+    liberalDemocracyVsAuthoritarianism: QuantitativeAxis
+
+class QuantitativeAnalysis(BaseModel):
+    textBased: QuantitativeLayer
+    betweenTheLines: QuantitativeLayer
+
+class OverallProfile(BaseModel):
+    historicalPerception: str
+    comprehensivePortrait: str
+
+class MemberAnalysisSchema(BaseModel):
+    overallProfile: OverallProfile
+    highlightedQuotes: HighlightedQuotes
+    analysisByExplicitText: QualitativeLayer
+    analysisBetweenTheLines: QualitativeLayer
+    quantitativeAnalysis: QuantitativeAnalysis
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +191,7 @@ def _format_axis(title, axis):
 # Processor
 # ---------------------------------------------------------------------------
 
-class MemberProcessor:
+class MemberAnalyzer:
     """
     Analyses MK political profiles using Gemini.
 
@@ -136,29 +204,17 @@ class MemberProcessor:
         MEMBER_ANALYSIS_MIN_NEW_UTTERANCES  10
     """
 
-    def __init__(self, data_dir, conn):
-        self.data_dir = data_dir
+    def __init__(self, conn):
         self.conn = conn
-        self.analysis_dir = os.path.join(data_dir, "member-analyses")
-        os.makedirs(self.analysis_dir, exist_ok=True)
 
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        load_dotenv(os.path.join(project_root, ".env"))
-        load_dotenv(os.path.join(project_root, ".env.local"), override=True)
-
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY not found in environment")
-
-        self.client = genai.Client(api_key=api_key)
-        self.model_name = os.environ.get("ANALYSIS_MODEL", "gemini-2.5-flash")
+        self.client, self.model_name = initialize_gemini_client(default_model="gemini-2.5-flash")
 
         # Tuning parameters
-        self.max_utterances = int(os.environ.get("MEMBER_ANALYSIS_MAX_UTTERANCES", 100))
-        self.min_words = int(os.environ.get("MEMBER_ANALYSIS_MIN_WORDS", 50))
-        self.decay_rate = float(os.environ.get("MEMBER_ANALYSIS_DECAY_RATE", 0.20))
-        self.min_days = int(os.environ.get("MEMBER_ANALYSIS_MIN_DAYS", 30))
-        self.min_new_utterances = int(os.environ.get("MEMBER_ANALYSIS_MIN_NEW_UTTERANCES", 10))
+        self.max_utterances = MEMBER_ANALYSIS_MAX_UTTERANCES
+        self.min_words = MEMBER_ANALYSIS_MIN_WORDS
+        self.decay_rate = MEMBER_ANALYSIS_DECAY_RATE
+        self.min_days = MEMBER_ANALYSIS_MIN_DAYS
+        self.min_new_utterances = MEMBER_ANALYSIS_MIN_NEW_UTTERANCES
 
     # ------------------------------------------------------------------
     # Public entry point — called by knesset_store_builder after sync
@@ -168,7 +224,7 @@ class MemberProcessor:
         """
         Check all members and run analysis on those that are due.
         A member is due when EITHER:
-          - They have never been analysed (no row in member_analysis), OR
+          - They have never been analyzed (no row in member_analysis), OR
           - Both conditions are true:
               1. At least MIN_DAYS have passed since last_analyzed_at
               2. At least MIN_NEW_UTTERANCES qualifying utterances have been
@@ -187,80 +243,71 @@ class MemberProcessor:
                     m.slug,
                     m.name,
                     p.name AS party_name,
-                    ma.last_analyzed_at
+                    CASE 
+                        WHEN ma.last_analyzed_at IS NULL THEN 'never analysed'
+                        ELSE COUNT(mu.member_slug)::text || ' new utterances since last analysis'
+                    END as reason
                 FROM member m
                 LEFT JOIN party p ON m.party_id = p.id
                 LEFT JOIN member_analysis ma ON ma.member_slug = m.slug
-            """)
-            all_members = cur.fetchall()
-
-        due = []
-        for slug, name, party_name, last_analyzed_at in all_members:
-            reason = self._due_reason(slug, last_analyzed_at)
-            if reason:
-                due.append((slug, name, party_name, reason))
+                LEFT JOIN member_utterance mu 
+                    ON mu.member_slug = m.slug 
+                   AND mu.word_count >= %(min_words)s 
+                   AND mu.created_at > ma.last_analyzed_at
+                WHERE 
+                    ma.last_analyzed_at IS NULL
+                    OR (CURRENT_DATE - ma.last_analyzed_at::date) >= %(min_days)s
+                GROUP BY m.slug, m.name, p.name, ma.last_analyzed_at
+                HAVING 
+                    ma.last_analyzed_at IS NULL 
+                    OR COUNT(mu.member_slug) >= %(min_new_utterances)s
+            """, {
+                'min_words': self.min_words,
+                'min_days': self.min_days,
+                'min_new_utterances': self.min_new_utterances
+            })
+            due = cur.fetchall()
 
         logger.info(f"Found {len(due)} members due for analysis.")
 
-        for slug, name, party_name, reason in due:
-            if dry_run:
+        if dry_run:
+            for slug, name, party_name, reason in due:
                 logger.info(f"[DRY RUN] Would analyse {name} ({slug}) — {reason}")
-                continue
+            return
 
-            logger.info(f"Analysing {name} ({slug}) — {reason}")
+        def process_member(member_data):
+            slug, name, party_name, reason = member_data
+            logger.info(f"Fetching context for {name} ({slug}) — {reason}")
             utterances = self._select_utterances(slug)
             if not utterances:
                 logger.warning(f"No qualifying utterances for {name}, skipping.")
-                continue
-
+                return None
+            
             context_text = "\n\n----------------------------------------\n\n".join(utterances)
             analysis = self._call_gemini(name, party_name or "", context_text)
-            if analysis:
-                self._save_to_db(slug, analysis)
-                self._save_markdown(slug, name, party_name or "", analysis)
-                logger.info(f"Done: {name}.")
+            return slug, name, analysis
 
-            time.sleep(1)  # rate-limit protection
+        success_count = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENT_ANALYSIS_WORKERS) as executor:
+            future_to_member = {executor.submit(process_member, m): m for m in due}
+            for future in concurrent.futures.as_completed(future_to_member):
+                try:
+                    res = future.result()
+                    if res and res[2]: # Has valid analysis
+                        slug, name, analysis = res
+                        self._save_to_db(slug, analysis)
+                        logger.info(f"Done and saved: {name}.")
+                        success_count += 1
+                except Exception as e:
+                    logger.error(f"Error analyzing member: {e}")
+
+        logger.info(f"Successfully processed and saved {success_count} members.")
 
     # ------------------------------------------------------------------
     # Trigger logic
     # ------------------------------------------------------------------
 
-    def _due_reason(self, slug, last_analyzed_at):
-        """
-        Returns a human-readable reason string if the member is due, else None.
-        """
-        if last_analyzed_at is None:
-            return "never analysed"
 
-        with self.conn.cursor() as cur:
-            # Condition 1: days elapsed
-            cur.execute(
-                "SELECT (CURRENT_DATE - %s::date) >= %s",
-                (last_analyzed_at, self.min_days)
-            )
-            days_ok = cur.fetchone()[0]
-            if not days_ok:
-                return None  # Too soon — skip without checking utterances
-
-            # Condition 2: new qualifying utterances since last analysis
-            cur.execute(
-                """
-                SELECT COUNT(*)
-                FROM member_utterance
-                WHERE member_slug = %s
-                  AND word_count >= %s
-                  AND created_at > %s
-                """,
-                (slug, self.min_words, last_analyzed_at)
-            )
-            new_count = cur.fetchone()[0]
-
-        if new_count >= self.min_new_utterances:
-            return f"{new_count} new utterances since last analysis"
-        return None
-
-    # ------------------------------------------------------------------
     # Smart utterance selection (SQL-scored)
     # ------------------------------------------------------------------
 
@@ -311,19 +358,21 @@ class MemberProcessor:
         prompt = (
             f"{instructions}\n\n"
             f"להלן אוסף הציטוטים של חבר הכנסת מהפרוטוקולים:\n\n"
-            f"{context[:200000]}"
+            f"{context[:MAX_MEMBER_CONTEXT_CHARS]}"
         )
         try:
-            response = self.client.models.generate_content(
+            return call_gemini_with_retry(
+                client=self.client,
                 model=self.model_name,
-                contents=prompt,
+                prompt=prompt,
                 config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
+                    response_mime_type="application/json",
+                    response_schema=MemberAnalysisSchema
                 ),
+                initial_delay=GEMINI_RETRY_INITIAL_DELAY
             )
-            return json.loads(response.text)
-        except Exception as e:
-            logger.error(f"Gemini API error for {name}: {e}")
+        except Exception:
+            # Errors are already logged in call_gemini_with_retry
             return None
 
     # ------------------------------------------------------------------
@@ -331,6 +380,10 @@ class MemberProcessor:
     # ------------------------------------------------------------------
 
     def _save_to_db(self, slug, analysis):
+        from src.python.scripts.migrate_analysis_schema import normalize_analysis
+        
+        normalized_analysis = normalize_analysis(analysis)
+        
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -344,73 +397,10 @@ class MemberProcessor:
                     last_analyzed_at  = EXCLUDED.last_analyzed_at,
                     updated_at        = EXCLUDED.updated_at
                 """,
-                (slug, Json(analysis), self.model_name)
+                (slug, Json(normalized_analysis), self.model_name)
             )
         self.conn.commit()
 
-    def _save_markdown(self, slug, name, party_name, analysis):
-        filename = f"{slug}__analysis__from-{MEMBER_PROTOCOL_SINCE_DATE}.md"
-        path = os.path.join(self.analysis_dir, filename)
-
-        profile = analysis.get('overallProfile') if isinstance(analysis.get('overallProfile'), dict) else {}
-        blunt = profile.get('bluntProfile') if isinstance(profile.get('bluntProfile'), dict) else {}
-        hist = profile.get('historicalContext') if isinstance(profile.get('historicalContext'), dict) else {}
-
-        lines = [
-            f"# ניתוח פוליטי: {name}",
-            "",
-            f"**סיעה:** {party_name}",
-            f"**מודל:** {self.model_name}",
-            f"**נוצר בתאריך:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            "",
-            "## פרופיל כולל",
-            "### דיוקן חד",
-            blunt.get('paragraph', ''),
-            _format_evidence(blunt.get('evidence', [])),
-            "",
-            "### הקשר היסטורי צפוי",
-            hist.get('paragraph', ''),
-            _format_evidence(hist.get('evidence', [])),
-            "",
-        ]
-
-        sections = analysis.get('analysisSections', {})
-        for key, label in [('textBased', 'על סמך הטקסט'), ('betweenTheLines', 'בין השורות')]:
-            layer = sections.get(key, {})
-            if layer:
-                lines.extend(_format_reading_layer(label, layer))
-                lines.append("")
-
-        quant = analysis.get('quantitativeAnalysis', {})
-        for key, label in [
-            ('textBased', 'ניתוח כמותי - על סמך הטקסט'),
-            ('betweenTheLines', 'ניתוח כמותי - בין השורות'),
-        ]:
-            data = quant.get(key, {})
-            if data:
-                lines.append(f"## {label}")
-                for axis_key, axis_label in AXIS_LABELS.items():
-                    axis_data = data.get(axis_key, {})
-                    if axis_data:
-                        lines.extend(_format_axis(axis_label, axis_data))
-                        lines.append("")
-
-        hq = analysis.get('highlightedQuotes', {})
-        if hq:
-            lines.append("## ציטוטים בולטים")
-            for hq_key, hq_label in [
-                ('innermostEmotions', 'רגשות ותחושות פנימיים'),
-                ('surprisingInnerWorldOrHistory', 'עולם פנימי או היסטוריה אישית מפתיעים'),
-                ('benevolentTowardOthers', 'יחס מיטיב לאחרים בכנסת'),
-            ]:
-                items = hq.get(hq_key, [])
-                if items:
-                    lines.append(f"### {hq_label}")
-                    lines.append(_format_evidence(items))
-                    lines.append("")
-
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
 
 
 # ---------------------------------------------------------------------------
@@ -421,10 +411,9 @@ if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     sys.path.insert(0, project_root)
     from src.python.data.database import get_db_connection
-    data_dir = os.path.abspath(os.path.join(project_root, "data"))
     conn = get_db_connection()
     try:
-        processor = MemberProcessor(data_dir, conn)
+        processor = MemberAnalyzer(conn)
         processor.analyze_due_members()
     finally:
         conn.close()
