@@ -51,7 +51,7 @@ class BaseODataLoader(ABC):
 
     def ensure_file(self, task):
         """Downloads the file for a specific task and saves it to DB"""
-        from utils import download_file
+        from src.python.scrapers.utils import download_file
         
         doc_id = str(task.get("documentId") or task.get("billId"))
         file_url = task["fileUrl"]

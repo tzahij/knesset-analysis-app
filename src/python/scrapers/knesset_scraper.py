@@ -98,6 +98,11 @@ def main():
     conn = get_db_connection()
     try:
         run_scraper_stage(conn, args.threads)
+        
+        logger.info("--- Stage 2: Triggering Analysis ---")
+        from src.python.analyzers.knesset_analyzer import run_analysis_stage
+        run_analysis_stage(conn, model="gemini-2.5-flash", dry_run=False)
+        
     except Exception as e:
         logger.error(f"Critical error during sync: {e}")
         traceback_str = "".join(traceback.format_tb(e.__traceback__))

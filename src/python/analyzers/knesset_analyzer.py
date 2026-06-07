@@ -32,7 +32,7 @@ logger = logging.getLogger("Analyzer")
 
 
 def run_analysis_stage(
-    conn: Connection, data_dir: str, model: str, dry_run: bool
+    conn: Connection, model: str, dry_run: bool
 ) -> None:
     logger.info("--- Stage 2: Running Analysis ---")
 

@@ -13,7 +13,7 @@ import base64
 import sys
 
 from psycopg2.extras import Json
-from member_registry import get_member_registry, resolve_member_by_name
+from src.python.scrapers.member_registry import get_member_registry, resolve_member_by_name
 
 # Configuration Environment Variables
 FETCH_TEXT_RETRIES = int(os.environ.get('FETCH_TEXT_RETRIES', 2))

@@ -8,14 +8,14 @@ from dateutil.relativedelta import relativedelta
 import pytz
 import sys
 
-from utils import (
+from src.python.scrapers.utils import (
     format_date_parts,
     normalize_search_text,
     download_file,
     sanitize_filename
 )
 
-from base_loader import BaseODataLoader
+from src.python.scrapers.base_loader import BaseODataLoader
 
 # Configuration Environment Variables
 SCRAPER_LAW_PAGE_SIZE = int(os.environ.get('SCRAPER_LAW_PAGE_SIZE', 50))

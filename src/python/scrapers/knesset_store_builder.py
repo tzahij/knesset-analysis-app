@@ -18,7 +18,7 @@ except AttributeError:
 
 from src.python.data.database import db_connection
 from src.python.scrapers.knesset_scraper import run_scraper_stage
-from python.analyzers.knesset_analyzer import run_analysis_stage
+from src.python.analyzers.knesset_analyzer import run_analysis_stage
 
 # Setup logging
 logging.basicConfig(
