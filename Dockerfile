@@ -15,8 +15,6 @@ COPY . .
 
 RUN mkdir -p /app/data
 
-VOLUME ["/app/data"]
-
 EXPOSE 3001
 
 # Default command runs the Flask server with gunicorn
