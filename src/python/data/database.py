@@ -32,16 +32,32 @@ def get_db_connection():
                     password=db_pass
                 )
     
+    def _get_valid_conn():
+        # Try up to 3 times to get a healthy connection
+        for _ in range(3):
+            conn = _pool.getconn()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                conn.rollback()  # Reset any transaction state
+                return conn
+            except (psycopg2.OperationalError, psycopg2.InterfaceError):
+                # Connection is dead (e.g. serverless DB closed it)
+                _pool.putconn(conn, close=True)
+        
+        # Fallback if retries are exhausted
+        return _pool.getconn()
+
     try:
         from flask import has_app_context, g
         if has_app_context():
             if 'db_conn' not in g:
-                g.db_conn = _pool.getconn()
+                g.db_conn = _get_valid_conn()
             return g.db_conn
     except ImportError:
         pass
         
-    return _pool.getconn()
+    return _get_valid_conn()
 
 def release_db_connection(conn):
     """
