@@ -3326,7 +3326,7 @@ function updateActionButtons() {
   elements.checkUpdatesButton.disabled =
     hideUpdates || isLoading || state.isCheckingUpdates || isLawRefreshRunning;
   if (elements.analyzeLawsButton) {
-    elements.analyzeLawsButton.disabled =
+    if(elements.analyzeLawsButton) elements.analyzeLawsButton.disabled =
       state.activeSource !== "laws" || isLoading || isLawRefreshRunning || isLawAnalysisRunning;
   }
   elements.checkUpdatesButton.textContent = state.isCheckingUpdates
@@ -3610,7 +3610,7 @@ function renderSourceSpecificUi() {
   }
   elements.checkUpdatesButton.hidden = sourceConfig.key === "laws" || Boolean(sourceConfig.hideUpdates);
   elements.updatesStatus.hidden = !showUpdatesStatus;
-  elements.lawAnalysisTools.hidden = sourceConfig.key !== "laws";
+  if(elements.lawAnalysisTools) elements.lawAnalysisTools.hidden = sourceConfig.key !== "laws";
   elements.downloadHeading.hidden = Boolean(sourceConfig.hideDownloads);
   elements.downloadCopy.hidden = Boolean(sourceConfig.hideDownloads);
   elements.downloadAllButton.hidden = Boolean(sourceConfig.hideDownloads);
@@ -3805,6 +3805,8 @@ function renderLawRefreshStatus() {
 }
 
 function renderLawAnalysisStatus() {
+  if (!elements.lawAnalysisStatus) return;
+
   const analysisStatus = getSourceState("laws").analysisStatus;
   elements.lawAnalysisStatus.className = "updates-status";
 
@@ -4168,7 +4170,7 @@ async function startLawAnalysis() {
     return;
   }
 
-  elements.analyzeLawsButton.disabled = true;
+  if(elements.analyzeLawsButton) elements.analyzeLawsButton.disabled = true;
 
   try {
     const { response, payload } = await fetchJson("/api/laws/analysis/bulk", {
@@ -4816,7 +4818,7 @@ elements.checkUpdatesButton.addEventListener("click", async () => {
   await checkForUpdates();
 });
 
-elements.analyzeLawsButton.addEventListener("click", async () => {
+elements.analyzeLawsButton?.addEventListener("click", async () => {
   await startLawAnalysis();
 });
 
