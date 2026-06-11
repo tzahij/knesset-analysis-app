@@ -751,7 +751,6 @@ function renderSurprisingVoteItem(item) {
             class="secondary-button compact-button ${isRunning ? "is-loading" : ""}"
             type="button"
             data-surprise-explain="${escapeHtml(item.routeSlug || "")}"
-            data-requires-role="admin"
             ${isRunning ? "disabled" : ""}
           >
             ${isRunning ? '<span class="loading-spinner" aria-hidden="true"></span>' : ""}

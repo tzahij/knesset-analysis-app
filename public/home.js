@@ -231,28 +231,6 @@ const elements = {
   protocolList: document.getElementById("protocol-list"),
   loadMoreButton: document.getElementById("load-more-button"),
   sourceTabs: Array.from(document.querySelectorAll(".source-tab")),
-  adminProtocolCheckButton: document.getElementById("admin-protocol-check-button"),
-  adminProtocolApplyButton: document.getElementById("admin-protocol-apply-button"),
-  adminProtocolStatus: document.getElementById("admin-protocol-status"),
-  adminProtocolResults: document.getElementById("admin-protocol-results"),
-  adminLawCheckButton: document.getElementById("admin-law-check-button"),
-  adminLawApplyButton: document.getElementById("admin-law-apply-button"),
-  adminLawStatus: document.getElementById("admin-law-status"),
-  adminLawResults: document.getElementById("admin-law-results"),
-  adminLawAnalysisCheckButton: document.getElementById("admin-law-analysis-check-button"),
-  adminLawAnalysisStatus: document.getElementById("admin-law-analysis-status"),
-  adminSurprisingVoteExplanationButton: document.getElementById(
-    "admin-surprising-vote-explanations-button",
-  ),
-  adminSurprisingVoteExplanationStatus: document.getElementById(
-    "admin-surprising-vote-explanations-status",
-  ),
-  adminLawAnalysisRebuildButton: document.getElementById("admin-law-analysis-rebuild-button"),
-  adminLawAnalysisRebuildStatus: document.getElementById("admin-law-analysis-rebuild-status"),
-  adminSmallQuotesRebuildButton: document.getElementById("admin-small-quotes-rebuild-button"),
-  adminSmallQuotesStatus: document.getElementById("admin-small-quotes-status"),
-  adminMemberProfilesRebuildButton: document.getElementById("admin-member-profiles-rebuild-button"),
-  adminMemberProfilesRebuildStatus: document.getElementById("admin-member-profiles-rebuild-status"),
 };
 
 function removeLandingPageSections() {
@@ -756,9 +734,7 @@ function syncAdminMemberProfilesRebuildPolling() {
   }
 }
 
-function isAdminUser() {
-  return Boolean(window.KnessetAuth?.canAccess("admin"));
-}
+function isAdminUser() { return false; }
 
 function formatAdminProtocolItems(items) {
   if (!Array.isArray(items) || !items.length) {
@@ -4845,113 +4821,31 @@ elements.analyzeLawsButton.addEventListener("click", async () => {
 });
 
 if (elements.adminProtocolCheckButton) {
-  elements.adminProtocolCheckButton.addEventListener("click", async () => {
-    await startAdminProtocolCheck();
-  });
 }
 
 if (elements.adminProtocolApplyButton) {
-  elements.adminProtocolApplyButton.addEventListener("click", async () => {
-    await applyAdminProtocolUpdates();
-  });
 }
 
 if (elements.adminLawCheckButton) {
-  elements.adminLawCheckButton.addEventListener("click", async () => {
-    await startAdminLawCheck();
-  });
 }
 
 if (elements.adminLawApplyButton) {
-  elements.adminLawApplyButton.addEventListener("click", async () => {
-    await applyAdminLawUpdates();
-  });
 }
 
 if (elements.adminLawAnalysisCheckButton) {
-  elements.adminLawAnalysisCheckButton.addEventListener("click", async () => {
-    await startAdminMissingLawAnalysis();
-  });
 }
 
 if (elements.adminSurprisingVoteExplanationButton) {
-  elements.adminSurprisingVoteExplanationButton.addEventListener("click", async () => {
-    await startAdminSurprisingVoteExplanations();
-  });
 }
 
 if (elements.adminLawAnalysisRebuildButton) {
-  elements.adminLawAnalysisRebuildButton.addEventListener("click", async () => {
-    await startAdminLawAnalysisRebuild();
-  });
 }
 
 if (elements.adminSmallQuotesRebuildButton) {
-  elements.adminSmallQuotesRebuildButton.addEventListener("click", async () => {
-    await startAdminSmallQuotesRebuild();
-  });
 }
 
 if (elements.adminMemberProfilesRebuildButton) {
-  elements.adminMemberProfilesRebuildButton.addEventListener("click", async () => {
-    await startAdminMemberProfilesRebuild();
-  });
 }
-
-window.addEventListener("knesset-auth-changed", () => {
-  if (isAdminUser()) {
-    void loadAdminProtocolUpdatePreview();
-    void loadAdminLawUpdatePreview();
-    void loadAdminMissingLawAnalysisStatus();
-    void loadAdminSurprisingVoteExplanationStatus();
-    void loadAdminLawAnalysisRebuildStatus();
-    void loadAdminSmallQuotesRebuildStatus();
-    void loadAdminMemberProfilesRebuildStatus();
-  } else {
-    syncAdminProtocolUpdatePolling();
-    syncAdminLawUpdatePolling();
-    syncAdminMissingLawAnalysisPolling();
-    syncAdminSurprisingVoteExplanationPolling();
-    syncAdminLawAnalysisRebuildPolling();
-    syncAdminSmallQuotesRebuildPolling();
-    syncAdminMemberProfilesRebuildPolling();
-    state.adminProtocolUpdates.preview = null;
-    state.adminProtocolUpdates.error = "";
-    state.adminProtocolUpdates.loading = false;
-    state.adminProtocolUpdates.checking = false;
-    state.adminProtocolUpdates.applying = false;
-    state.adminLawUpdates.preview = null;
-    state.adminLawUpdates.error = "";
-    state.adminLawUpdates.loading = false;
-    state.adminLawUpdates.checking = false;
-    state.adminLawUpdates.applying = false;
-    state.adminMissingLawAnalysis.error = "";
-    state.adminMissingLawAnalysis.loading = false;
-    state.adminMissingLawAnalysis.starting = false;
-    state.adminSurprisingVoteExplanations.status = null;
-    state.adminSurprisingVoteExplanations.error = "";
-    state.adminSurprisingVoteExplanations.loading = false;
-    state.adminSurprisingVoteExplanations.starting = false;
-    state.adminLawAnalysisRebuild.error = "";
-    state.adminLawAnalysisRebuild.loading = false;
-    state.adminLawAnalysisRebuild.starting = false;
-    state.adminSmallQuotesRebuild.status = null;
-    state.adminSmallQuotesRebuild.error = "";
-    state.adminSmallQuotesRebuild.loading = false;
-    state.adminSmallQuotesRebuild.starting = false;
-    state.adminMemberProfilesRebuild.status = null;
-    state.adminMemberProfilesRebuild.error = "";
-    state.adminMemberProfilesRebuild.loading = false;
-    state.adminMemberProfilesRebuild.starting = false;
-    renderAdminProtocolUpdatePanel();
-    renderAdminLawUpdatePanel();
-    renderAdminMissingLawAnalysisPanel();
-    renderAdminSurprisingVoteExplanationPanel();
-    renderAdminLawAnalysisRebuildPanel();
-    renderAdminSmallQuotesRebuildPanel();
-    renderAdminMemberProfilesRebuildPanel();
-  }
-});
 
 (async () => {
   const initialRoute = getRequestedExplorerRoute();

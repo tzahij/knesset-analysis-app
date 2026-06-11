@@ -226,7 +226,6 @@
               id="refresh-button"
               class="secondary-button"
               type="button"
-              data-requires-role="advanced"
             >
               רענון מטא-דאטה
             </button>
@@ -235,7 +234,6 @@
               id="check-updates-button"
               class="secondary-button"
               type="button"
-              data-requires-role="advanced"
             >
               בדוק עדכונים
             </button>
@@ -243,29 +241,6 @@
 
           <div id="updates-status" class="updates-status">
             <p class="muted">המערכת עדיין לא בדקה אם פורסמו פרוטוקולים חדשים.</p>
-          </div>
-
-          <div
-            id="law-analysis-tools"
-            hidden
-            data-requires-role="admin"
-            data-auth-mode="hide"
-          >
-            <hr class="divider" />
-
-            <h2 id="law-analysis-heading">ניתוח אידיאולוגי של חוקים</h2>
-            <p class="muted" id="law-analysis-copy">
-              הכפתור יריץ ניתוח Gemini עבור כל החוקים שעדיין לא נותחו, וידרג אותם על פי
-              ארבעה צירים אידיאולוגיים.
-            </p>
-
-            <button id="analyze-laws-button" class="primary-button" type="button">
-              נתח את כל החוקים שטרם נותחו
-            </button>
-
-            <div id="law-analysis-status" class="updates-status">
-              <p class="muted">עדיין לא הופעל ניתוח חוקים קבוצתי.</p>
-            </div>
           </div>
 
           <hr class="divider" />
@@ -312,204 +287,9 @@
           </div>
         </section>
       </section>
-
-      <aside
-        id="admin-side-panel"
-        class="admin-side-panel auth-role-hidden"
-        data-requires-role="admin"
-        data-auth-mode="hide"
-      >
-        <div class="admin-side-panel__header">
-          <p class="eyebrow">Admin Console</p>
-          <h2>Content Intake</h2>
-        </div>
-        <div class="admin-side-panel__section">
-          <h3>Protocol Intake</h3>
-          <p class="muted">
-            Check all protocol feeds without importing them yet. If new protocols are found,
-            review them here and explicitly approve adding them to the website.
-          </p>
-
-          <div class="action-stack">
-            <button id="admin-protocol-check-button" class="primary-button" type="button">
-              Mass-check all protocols
-            </button>
-            <button
-              id="admin-protocol-apply-button"
-              class="secondary-button"
-              type="button"
-              hidden
-            >
-              Add approved protocols to the website
-            </button>
-          </div>
-
-          <div id="admin-protocol-status" class="updates-status is-neutral">
-            <p class="muted">No admin protocol review has been started yet.</p>
-          </div>
-
-          <div id="admin-protocol-results" class="admin-side-panel__results">
-            <p class="muted">New protocol candidates will appear here after a check.</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section">
-          <h3>Third-reading Law Intake</h3>
-          <p class="muted">
-            Check the Knesset laws feed for new laws that passed in a third reading. Review the
-            candidates here and approve downloading and adding them only if you want them on the
-            site.
-          </p>
-
-          <div class="action-stack">
-            <button id="admin-law-check-button" class="primary-button" type="button">
-              Mass-check all laws
-            </button>
-            <button
-              id="admin-law-apply-button"
-              class="secondary-button"
-              type="button"
-              hidden
-            >
-              Download and add approved laws
-            </button>
-          </div>
-
-          <div id="admin-law-status" class="updates-status is-neutral">
-            <p class="muted">No admin law review has been started yet.</p>
-          </div>
-
-          <div id="admin-law-results" class="admin-side-panel__results">
-            <p class="muted">New third-reading laws will appear here after a check.</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section">
-          <h3>Create Missing Law Axes Profiles</h3>
-          <p class="muted">
-            Analyze only the newly added third-reading laws that still do not have an axes profile.
-            If there are no such laws, the system will tell you and do nothing.
-          </p>
-
-          <div class="action-stack">
-            <button id="admin-law-analysis-check-button" class="primary-button" type="button">
-              Analyze new laws without axes profiles
-            </button>
-          </div>
-
-          <div id="admin-law-analysis-status" class="updates-status is-neutral">
-            <p class="muted">No admin-only new-law analysis run has been started yet.</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section">
-          <h3>Explain Unexplained Surprising Votes</h3>
-          <p class="muted">
-            Run the existing surprising-vote explanation flow for every currently surprising vote
-            that does not yet have its own explanation. Already explained votes will be skipped.
-          </p>
-
-          <div class="action-stack">
-            <button
-              id="admin-surprising-vote-explanations-button"
-              class="primary-button"
-              type="button"
-            >
-              Explain all unexplained surprising votes
-            </button>
-          </div>
-
-          <div id="admin-surprising-vote-explanations-status" class="updates-status is-neutral">
-            <p class="muted">No bulk surprising-vote explanation run has been started yet.</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section admin-side-panel__section--danger-zone-header">
-          <div class="admin-side-panel__danger-header">
-            <h3>Total Reconstruction</h3>
-            <p>(Don't touch!)</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section admin-side-panel__section--danger-item">
-          <h3>Recreate All Law Axes Profiles</h3>
-          <div class="admin-danger-box">
-            <strong>WARNING</strong>
-            <p>
-              This process will take a long time, may cost money, and will delete and override the
-              existing <code>axes analysis</code> for all third-reading laws.
-            </p>
-          </div>
-          <p class="muted">
-            Use this only when you intentionally want to regenerate every law’s axes profile from
-            scratch.
-          </p>
-
-          <div class="action-stack">
-            <button id="admin-law-analysis-rebuild-button" class="primary-button" type="button">
-              Recreate all law axes profiles
-            </button>
-          </div>
-
-          <div id="admin-law-analysis-rebuild-status" class="updates-status is-neutral">
-            <p class="muted">No destructive full law-analysis rebuild has been started yet.</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section admin-side-panel__section--danger-item">
-          <h3>Recreate Small Quotes Files</h3>
-          <div class="admin-danger-box">
-            <strong>WARNING</strong>
-            <p>
-              This process will take a long time, may cost money, and will delete and override the
-              existing <code>small quotes</code> file for every MK.
-            </p>
-          </div>
-          <p class="muted">
-            Use this only when you intentionally want to rebuild every MK’s small quotes file from
-            the most recent ten qualifying protocols.
-          </p>
-
-          <div class="action-stack">
-            <button id="admin-small-quotes-rebuild-button" class="primary-button" type="button">
-              Recreate all small quotes files
-            </button>
-          </div>
-
-          <div id="admin-small-quotes-status" class="updates-status is-neutral">
-            <p class="muted">No destructive small-quotes rebuild has been started yet.</p>
-          </div>
-        </div>
-
-        <div class="admin-side-panel__section admin-side-panel__section--danger-item">
-          <h3>Recreate All MK Profiles</h3>
-          <div class="admin-danger-box">
-            <strong>WARNING</strong>
-            <p>
-              This process will take a long time, may cost money, and will delete and override the
-              existing MK profiles generated from the <code>small quotes</code> files.
-            </p>
-          </div>
-          <p class="muted">
-            Use this only when you intentionally want to regenerate every MK political profile from
-            scratch.
-          </p>
-
-          <div class="action-stack">
-            <button id="admin-member-profiles-rebuild-button" class="primary-button" type="button">
-              Recreate all MK profiles
-            </button>
-          </div>
-
-          <div id="admin-member-profiles-rebuild-status" class="updates-status is-neutral">
-            <p class="muted">No destructive MK-profile rebuild has been started yet.</p>
-          </div>
-        </div>
-      </aside>
     </main>
 
     <script src="/site-nav.js" defer></script>
-    <script src="/auth-widget.js" defer></script>
     <script src="/member-current-status.js" defer></script>
     <script src="/home.js" defer></script>
   </body>
