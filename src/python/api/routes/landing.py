@@ -11,24 +11,28 @@ logger = logging.getLogger(__name__)
 AXIS_DEFINITIONS = [
     {
         "key": "religiousSecular",
+        "dbKey": "religiousVsSecular",
         "label": "דתי מול חילוני",
         "lowLabel": "חילוני",
         "highLabel": "דתי",
     },
     {
         "key": "socialismCapitalism",
+        "dbKey": "socialismVsCapitalism",
         "label": "סוציאליזם מול קפיטליזם",
         "lowLabel": "סוציאליסטי",
         "highLabel": "קפיטליסטי",
     },
     {
         "key": "doveHawk",
+        "dbKey": "dovishVsHawkish",
         "label": "יוני מול נצי",
         "lowLabel": "יוני",
         "highLabel": "נצי",
     },
     {
         "key": "liberalDemocracyAuthoritarianism",
+        "dbKey": "liberalDemocracyVsAuthoritarianism",
         "label": "דמוקרטיה ליברלית מול סמכותנות",
         "lowLabel": "דמוקרטי",
         "highLabel": "סמכותני",
@@ -412,10 +416,11 @@ def get_know_your_mk():
             overall = analysis.get("overallProfile", {})
             blunt = overall.get("bluntProfile", {}) if isinstance(overall, dict) else {}
 
-            def _axis_entry(axis_map, axis_key):
+            def _axis_entry(axis_map, axis_def):
                 if not isinstance(axis_map, dict):
                     return None
-                ax = axis_map.get(axis_key, {})
+                db_key = axis_def.get("dbKey", axis_def["key"])
+                ax = axis_map.get(db_key, {})
                 if not isinstance(ax, dict):
                     return None
                 score = ax.get("score")
@@ -428,17 +433,18 @@ def get_know_your_mk():
 
             axes = {
                 "explicit": {
-                    k["key"]: _axis_entry(text_based, k["key"])
+                    k["key"]: _axis_entry(text_based, k)
                     for k in AXIS_DEFINITIONS
                 },
                 "implicit": {
-                    k["key"]: _axis_entry(between, k["key"])
+                    k["key"]: _axis_entry(between, k)
                     for k in AXIS_DEFINITIONS
                 },
             }
 
             members.append({
                 "slug": slug,
+                "routeSlug": slug,
                 "name": name,
                 "partyName": party_name,
                 "href": f"/members/{slug}",

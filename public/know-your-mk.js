@@ -23,6 +23,10 @@ const elements = {
   detail: document.getElementById("know-your-mk-detail"),
 };
 
+if (elements.detail) {
+  document.body.appendChild(elements.detail);
+}
+
 function formatInteger(value) {
   return Number(value || 0).toLocaleString("he-IL");
 }
@@ -809,8 +813,11 @@ function renderDetail() {
 
   if (!member || !axis || !axisRecord) {
     elements.detail.innerHTML = '<div class="landing-empty-card"><p class="muted">בחרו חבר כנסת באחד הצירים כדי לראות את הנימוקים.</p></div>';
+    elements.detail.classList.remove("is-open");
     return;
   }
+
+  elements.detail.classList.add("is-open");
 
   const sourceLabel =
     activeViewKey === "votesBased"
@@ -819,6 +826,9 @@ function renderDetail() {
 
   elements.detail.innerHTML = `
     <article class="know-detail-card">
+      <div style="position: sticky; top: 1.5rem; display: flex; justify-content: flex-end; z-index: 100; margin-bottom: -2rem; margin-top: -0.5rem; width: 100%;">
+        <button type="button" class="know-detail-close-btn" aria-label="סגור את החלונית" title="סגור" style="background: #e53e3e; color: white; border: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; cursor: pointer; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">&times;</button>
+      </div>
       <div class="know-detail-card__header">
         <div>
           <p class="eyebrow">חבר הכנסת שנבחר</p>
@@ -1019,6 +1029,13 @@ if (elements.axes) {
 
 if (elements.detail) {
   elements.detail.addEventListener("click", (event) => {
+    if (event.target.closest(".know-detail-close-btn")) {
+      state.selectedMemberSlug = "";
+      elements.detail.classList.remove("is-open");
+      renderPage();
+      return;
+    }
+
     const token = event.target.closest("[data-know-detail-axis]");
 
     if (!token) {
