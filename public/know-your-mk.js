@@ -452,8 +452,6 @@ function getSummaryChips(data, activeViewKey) {
 
   return [
     `${formatInteger(data.summary?.availableMembers)} נותחו`,
-    `${formatInteger(data.summary?.smallSourceMembers)} מהקובץ הקטן`,
-    `${formatInteger(data.summary?.fullSourceMembers)} גיבוי מהקובץ המלא`,
     `עודכן ${escapeHtml(formatIsoDate(data.generatedAt))}`,
   ];
 }
