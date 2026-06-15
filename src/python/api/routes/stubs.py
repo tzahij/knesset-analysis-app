@@ -110,6 +110,45 @@ def member_contact_report(slug):
 
 @bp.route("/api/methodology")
 def methodology():
+    import os
+    import json
+    from src.python.data.database import get_db_connection, release_db_connection
+    
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+    data_path = os.path.join(project_root, "src", "methodology", "methodology-documentation.json")
+    
+    if os.path.exists(data_path):
+        with open(data_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+        # Dynamically inject real DB counts and fix wording
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM law")
+                law_count = cur.fetchone()[0]
+                
+                cur.execute("SELECT COUNT(*) FROM protocol WHERE source_type = 'committee'")
+                committee_count = cur.fetchone()[0]
+                
+                cur.execute("SELECT COUNT(*) FROM protocol WHERE source_type = 'plenum'")
+                plenum_count = cur.fetchone()[0]
+                
+            for card in data.get("snapshotCards", []):
+                if "חוקים" in card.get("label", ""):
+                    card["value"] = f"{law_count:,}"
+                elif "פרוטוקולי מליאה" in card.get("label", ""):
+                    card["value"] = f"{plenum_count:,}"
+                elif "פרוטוקולי ועדות" in card.get("label", ""):
+                    card["value"] = f"{committee_count:,}"
+                    
+        except Exception as e:
+            logger.error(f"Error injecting methodology counts: {e}")
+        finally:
+            release_db_connection(conn)
+            
+        return jsonify(data)
+        
     from datetime import datetime
     from dateutil.relativedelta import relativedelta
     since_date = (datetime.now() - relativedelta(years=1)).strftime("%Y-%m-%d")
@@ -118,10 +157,14 @@ def methodology():
         "note": "Methodology endpoint not yet ported to Python.",
     })
 
-
 @bp.route("/api/methodology/member-quote-files")
 def methodology_member_quote_files():
-    return jsonify({"items": []})
+    # Return empty members for now to prevent frontend crash
+    from datetime import datetime
+    return jsonify({
+        "generatedAt": datetime.now().isoformat(),
+        "members": []
+    })
 
 
 @bp.route("/api/methodology/recreate", methods=["POST"])
