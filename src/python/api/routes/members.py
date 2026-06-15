@@ -318,23 +318,97 @@ def get_contact_directory():
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT m.slug, m.name, p.name, m.contacts
+                SELECT m.slug, m.name, p.name as party_name, m.contacts
                 FROM member m
                 LEFT JOIN party p ON m.party_id = p.id
                 ORDER BY m.name ASC
             """)
             rows = cur.fetchall()
 
-        members = [
-            {
-                "slug": r[0],
-                "name": r[1],
-                "partyName": r[2],
-                "contacts": r[3] or {},
-            }
-            for r in rows
-        ]
-        return jsonify({"members": members})
+        members = []
+        parties_map = {}
+        total_contacts = 0
+        members_with_direct = 0
+        platform_member_counts = {}
+        all_available_platforms = set()
+        
+        DIRECT_CONTACT_PLATFORMS = {"email", "phone", "whatsapp"}
+
+        for r in rows:
+            slug = r[0]
+            name = r[1]
+            party_name = r[2]
+            party_slug = _party_slug(party_name)
+            
+            # Use flatten_contacts safely. Ignore if not list.
+            raw_contacts = r[3]
+            if not isinstance(raw_contacts, list):
+                raw_contacts = []
+                
+            contact_list = []
+            uid = 0
+            has_direct = False
+            member_platforms = set()
+            
+            for item in raw_contacts:
+                if not isinstance(item, dict): continue
+                href = item.get("href", "") or ""
+                if not href: continue
+                platform = item.get("platform", "unknown")
+                member_platforms.add(platform)
+                all_available_platforms.add(platform)
+                if platform.lower() in DIRECT_CONTACT_PLATFORMS:
+                    has_direct = True
+                
+                uid += 1
+                contact_list.append({
+                    "id": item.get("id") or f"{platform}-{uid}",
+                    "platform": platform,
+                    "href": href,
+                    "value": item.get("value", "") or item.get("label", "") or "",
+                    "label": item.get("label", "") or "",
+                })
+                
+            contact_count = len(contact_list)
+            total_contacts += contact_count
+            if has_direct:
+                members_with_direct += 1
+                
+            for plat in member_platforms:
+                platform_member_counts[plat] = platform_member_counts.get(plat, 0) + 1
+                
+            # Party tracking
+            if party_slug:
+                if party_slug not in parties_map:
+                    parties_map[party_slug] = {"slug": party_slug, "name": party_name, "memberCount": 0}
+                parties_map[party_slug]["memberCount"] += 1
+
+            members.append({
+                "slug": slug,
+                "name": name,
+                "partySlug": party_slug,
+                "partyName": party_name,
+                "contacts": contact_list,
+                "contactCount": contact_count,
+                "availablePlatforms": list(member_platforms),
+                "href": f"/members/{slug}"
+            })
+
+        summary = {
+            "totalMembers": len(members),
+            "totalContacts": total_contacts,
+            "membersWithDirectContact": members_with_direct,
+            "platformMemberCounts": platform_member_counts
+        }
+
+        return jsonify({
+            "builtAt": datetime.now().isoformat(),
+            "disclaimer": "המידע נאסף מאתר הכנסת ומרשתות חברתיות.",
+            "summary": summary,
+            "parties": sorted(parties_map.values(), key=lambda x: x["name"] if x["name"] else ""),
+            "availablePlatforms": sorted(list(all_available_platforms)),
+            "members": members
+        })
     except Exception as e:
         logger.error(f"GET /api/member-contact-directory error: {e}")
         return jsonify({"error": str(e)}), 500
